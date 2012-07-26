@@ -1,0 +1,11 @@
+{
+	"address":"tcp://127.0.0.1:5566",
+	"redis":{
+		"host":"127.0.0.1",
+		"port":6379
+	},
+	"test":{
+		"certificate":"/path/to/cert.p12",
+		"passwd":"cert_password"
+	}
+}
