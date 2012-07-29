@@ -1,5 +1,5 @@
 import sbt._
-import sbt.Keys._
+import Keys._
 
 object ZeromqapnsBuild extends Build {
   lazy val copyDependencies = TaskKey[Unit]("pack")
@@ -14,7 +14,7 @@ object ZeromqapnsBuild extends Build {
   }
 
   lazy val zeromqapns = Project(
-    id = "zeromq-apns",
+    id = "Zeromq-apns",
     base = file("."),
     settings = Project.defaultSettings ++ Seq(
       copyDepTask,
