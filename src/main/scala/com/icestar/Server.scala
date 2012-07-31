@@ -47,6 +47,8 @@ class Server(address: String) extends Actor with ActorLogging {
   val SetCommand = """set (.+)::(.+)""".r
   val APNCommand = """apnset (.+)""".r
   val GetCommand = """get (.+)""".r
+  val GetAllGameIds = "getAllGameIds"
+  val GetAllGameContents = "getAllGameContents"
 
   override def preStart() = {
     log.debug("ZMQActor Starting")
@@ -71,20 +73,23 @@ class Server(address: String) extends Actor with ActorLogging {
             sender ! ZMQMessage(Seq(Frame("ok")))
           case GetCommand(key) =>
             sender ! ZMQMessage(Seq(Frame(RedisPool.hget(APN_GAMES_MAP, key))))
+          case GetAllGameIds =>
+            val data = RedisPool.hkeys(APN_GAMES_MAP)
+            var seq: Seq[Frame] = Seq()
+            data.foreach(s => {
+              seq ++= Seq(Frame(s))
+            })
+            sender ! ZMQMessage(seq)
+          case GetAllGameContents =>
+            val data = RedisPool.hvals(APN_GAMES_MAP)
+            var seq: Seq[Frame] = Seq()
+            data.foreach(s => {
+              seq ++= Seq(Frame(s))
+            })
+            sender ! ZMQMessage(seq)
           case _ => sender ! ZMQMessage(Seq(Frame("error")))
         }
       })
-    //      m.firstFrameAsString match {
-    //        case SetCommand(gameId, data) =>
-    //          RedisPool.hset("APN_GAMES_MAP", gameId, data)
-    //          sender ! ZMQMessage(Seq(Frame("ok")))
-    //        case APNCommand(key, value) =>
-    //          RedisPool.set(key, value)
-    //          sender ! ZMQMessage(Seq(Frame("ok")))
-    //        case GetCommand(key) =>
-    //          sender ! ZMQMessage(Seq(Frame(RedisPool.hget(APN_GAMES_MAP, key))))
-    //        case _ => sender ! ZMQMessage(Seq(Frame("error")))
-    //      }
     case x => log.warning("Received unknown message: {}", x)
   }
 }
