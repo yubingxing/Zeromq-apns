@@ -43,7 +43,7 @@ object Server {
 }
 class Server(address: String) extends Actor with ActorLogging {
   val APN_GAMES_MAP = "APN_GAMES_MAP"
-  val socket = context.system.newSocket(SocketType.Rep, Bind(address), Listener(self))
+  val repSocket = context.system.newSocket(SocketType.Rep, Bind(address), Listener(self))
   val SetCommand = """set (.+)::(.+)""".r
   val APNCommand = """apnset (.+)""".r
   val GetCommand = """get (.+)""".r
@@ -67,26 +67,26 @@ class Server(address: String) extends Actor with ActorLogging {
         msg match {
           case SetCommand(gameId, data) =>
             RedisPool.hset("APN_GAMES_MAP", gameId, data)
-            sender ! ZMQMessage(Seq(Frame("ok")))
+            repSocket ! ZMQMessage(Seq(Frame("ok")))
           case APNCommand(key, value) =>
             RedisPool.set(key, value)
-            sender ! ZMQMessage(Seq(Frame("ok")))
+            repSocket ! ZMQMessage(Seq(Frame("ok")))
           case GetCommand(key) =>
-            sender ! ZMQMessage(Seq(Frame(RedisPool.hget(APN_GAMES_MAP, key))))
+            repSocket ! ZMQMessage(Seq(Frame(RedisPool.hget(APN_GAMES_MAP, key))))
           case GetAllGameIds =>
             val data = RedisPool.hkeys(APN_GAMES_MAP)
             var seq: Seq[Frame] = Seq()
             data.foreach(s => {
               seq ++= Seq(Frame(s))
             })
-            sender ! ZMQMessage(seq)
+            repSocket ! ZMQMessage(seq)
           case GetAllGameContents =>
             val data = RedisPool.hvals(APN_GAMES_MAP)
             var seq: Seq[Frame] = Seq()
             data.foreach(s => {
               seq ++= Seq(Frame(s))
             })
-            sender ! ZMQMessage(seq)
+            repSocket ! ZMQMessage(seq)
           case _ => sender ! ZMQMessage(Seq(Frame("error")))
         }
       })

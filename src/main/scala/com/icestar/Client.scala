@@ -21,7 +21,7 @@ object Client {
     client
   }
 
-  def main(args: Array[String]) = {
+  def test() = {
     val system = ActorSystem("ZMQ-CLIENT")
     val client = Client(system, "tcp://127.0.0.1:5566")
     client ! """set hahahaha::{"test":"testesttest"}"""
