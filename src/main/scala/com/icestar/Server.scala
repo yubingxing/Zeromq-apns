@@ -1,8 +1,19 @@
 package com.icestar
 
+import org.slf4j.LoggerFactory
+
+import akka.actor.actorRef2Scala
+import akka.actor.Actor
+import akka.actor.ActorLogging
 import akka.actor.ActorSystem
 import akka.actor.Props
-import org.slf4j.LoggerFactory
+import akka.zeromq.zeromqSystem
+import akka.zeromq.Bind
+import akka.zeromq.Connecting
+import akka.zeromq.Frame
+import akka.zeromq.Listener
+import akka.zeromq.SocketType
+import akka.zeromq.ZMQMessage
 
 /**
  * Server boot class
@@ -10,21 +21,70 @@ import org.slf4j.LoggerFactory
  */
 object Server {
   val logger = LoggerFactory.getLogger(getClass)
-  
+
   def apply(system: ActorSystem, address: String) = {
     logger.info("Creating Sockets...")
-    val server = system.actorOf(Props(new ZMQActor(address)), "Server")
+    val server = system.actorOf(Props(new Server(address)), "Server")
     logger.info("Socket created success.")
     server
   }
 
   def main(args: Array[String]) = {
     logger.info("Starting ZMQ-APNs server...")
-    val system = ActorSystem("ZMQ-APNs")
+    val system = ActorSystem("ZMQ-APNS-SERVER")
     //    Conf read args.head
     logger.info("Reading configure...")
     Conf.read("src/main/resources/conf")
     RedisPool.init(Conf.get("redis", "host").asInstanceOf[String], Conf.get("redis", "port").asInstanceOf[Int])
-    val server = Server(system, Conf.get("address").asInstanceOf[String])
+    val address = Conf.get("address").asInstanceOf[String]
+    println("Connecting to " + address)
+    val server = Server(system, address)
+  }
+}
+class Server(address: String) extends Actor with ActorLogging {
+  val APN_GAMES_MAP = "APN_GAMES_MAP"
+  val socket = context.system.newSocket(SocketType.Rep, Bind(address), Listener(self))
+  val SetCommand = """set (.+)::(.+)""".r
+  val APNCommand = """apnset (.+)""".r
+  val GetCommand = """get (.+)""".r
+
+  override def preStart() = {
+    log.debug("ZMQActor Starting")
+  }
+  override def preRestart(reason: Throwable, message: Option[Any]) {
+    log.error(reason, "Restarting due to [{}] when processing [{}]",
+      reason.getMessage, message.getOrElse(""))
+  }
+
+  def receive = {
+    case Connecting => println("ZMQ-APNs Server connected")
+    case m: ZMQMessage =>
+      m.frames.foreach(frame => {
+        val msg = frame.toString()
+        println("[Receive]:: " + msg)
+        msg match {
+          case SetCommand(gameId, data) =>
+            RedisPool.hset("APN_GAMES_MAP", gameId, data)
+            sender ! ZMQMessage(Seq(Frame("ok")))
+          case APNCommand(key, value) =>
+            RedisPool.set(key, value)
+            sender ! ZMQMessage(Seq(Frame("ok")))
+          case GetCommand(key) =>
+            sender ! ZMQMessage(Seq(Frame(RedisPool.hget(APN_GAMES_MAP, key))))
+          case _ => sender ! ZMQMessage(Seq(Frame("error")))
+        }
+      })
+    //      m.firstFrameAsString match {
+    //        case SetCommand(gameId, data) =>
+    //          RedisPool.hset("APN_GAMES_MAP", gameId, data)
+    //          sender ! ZMQMessage(Seq(Frame("ok")))
+    //        case APNCommand(key, value) =>
+    //          RedisPool.set(key, value)
+    //          sender ! ZMQMessage(Seq(Frame("ok")))
+    //        case GetCommand(key) =>
+    //          sender ! ZMQMessage(Seq(Frame(RedisPool.hget(APN_GAMES_MAP, key))))
+    //        case _ => sender ! ZMQMessage(Seq(Frame("error")))
+    //      }
+    case x => log.warning("Received unknown message: {}", x)
   }
 }

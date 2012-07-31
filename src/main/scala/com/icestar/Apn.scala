@@ -5,16 +5,20 @@ import com.notnoop.apns.ReconnectPolicy.Provided.EVERY_HALF_HOUR
 import com.notnoop.apns.APNS
 import com.notnoop.apns.ApnsService
 
+/**
+ * Apn utils
+ * @author IceStar
+ */
 object Apn {
   val logger = LoggerFactory.getLogger(getClass)
   var map = Map[String, ApnsService]()
   var service: ApnsService = _
 
-  def apply(cert: String, pass: String, devMode: Boolean) = {
-    if (map(cert).isInstanceOf[ApnsService]) {
-      map(cert).asInstanceOf[ApnsService]
+  def apply(gameId: String, cert: String, pass: String, devMode: Boolean) = {
+    if (map(gameId).isInstanceOf[ApnsService]) {
+      map(gameId).asInstanceOf[ApnsService]
     } else {
-      map += (cert -> APNS.newService().withCert(cert, pass).withReconnectPolicy(EVERY_HALF_HOUR).withProductionDestination().build())
+      map += (gameId -> APNS.newService().withCert(cert, pass).withReconnectPolicy(EVERY_HALF_HOUR).withProductionDestination().build())
     }
   }
 

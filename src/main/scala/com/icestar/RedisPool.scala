@@ -51,7 +51,23 @@ object RedisPool {
   def hget(key: Any, field: Any) = {
     clients.withClient(client => client.hget(key, field) get)
   }
+  
+  def hmset(key: Any, map: Map[String, String]) = {
+	  clients.withClient(client => client.hmset(key, map))
+  }
 
+  def hmget(key: Any, fields: Array[String]) = {
+	  clients.withClient(client => client.hmget(key, fields) get)
+  }
+  
+  def hkeys(key: Any) = {
+	  clients.withClient(client => client.hkeys(key) get)
+  }
+  
+  def hvals(key: Any) = {
+	  clients.withClient(client => client.hvals(key) get)
+  }
+  
   def hlen(key: Any) = {
     clients.withClient(client => client.hlen(key) get)
   }
