@@ -22,6 +22,12 @@ import akka.routing.FromConfig
 
 object StaticContentServer {
   private val actorSystem = ActorSystem("staticContentServer")
+
+  def apply() = {
+    new StaticContentServer(actorSystem)
+  }
+}
+class StaticContentServer private (system: ActorSystem) extends AnyRef {
   private val routes = Routes({
     case event @ GET(PathSegments("files" :: relativePath)) => {
       val request = new StaticFileRequest(
@@ -40,9 +46,10 @@ object StaticContentServer {
   private var tempDir: File = null
   private var router: ActorRef = null
   private var webServer: WebServer = null
+  private val conf = ConfigFactory.load
+  var path: String = null
 
-  def apply() = {
-    val conf = ConfigFactory.load
+  def start() {
     // Create root and temp dir
     rootDir = new File(conf.getString("staticContentServer.rootPath"))
     rootDir.mkdir()
@@ -55,25 +62,26 @@ object StaticContentServer {
     StaticContentHandlerConfig.serverCacheTimeoutSeconds = 2
 
     // Start routers 
-    router = actorSystem.actorOf(Props[StaticContentHandler].
+    router = system.actorOf(Props[StaticContentHandler].
       withRouter(FromConfig()).withDispatcher("my-pinned-dispatcher"), "my-router")
 
     // Start web server
     webServer = new WebServer(new WebServerConfig(conf, "staticContentServer"),
-      routes, actorSystem)
+      routes, system)
+    path = "http://" + webServer.config.hostname + ":" + webServer.config.port + "/"
     webServer.start()
   }
 
   def stop() {
     webServer.stop()
     if (router != null) {
-      actorSystem.stop(router)
+      system.stop(router)
       router = null
     }
     if (tempDir != null) {
       FileUtils.deleteDirectory(tempDir)
       tempDir = null
     }
-    actorSystem.shutdown()
+    system.shutdown()
   }
 }

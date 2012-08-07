@@ -42,6 +42,7 @@ object Server {
     println("Connecting to " + address)
     val server = Server(system, address)
     val contentServer = StaticContentServer()
+    contentServer start;
   }
 }
 private class Server(address: String) extends Actor with ActorLogging {
