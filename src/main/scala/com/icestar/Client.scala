@@ -15,7 +15,7 @@ import akka.zeromq.SocketType
 import akka.zeromq.ZMQMessage
 
 object Client {
-  val logger = LoggerFactory.getLogger(getClass)
+  private val logger = LoggerFactory.getLogger(getClass)
   def apply(system: ActorSystem, address: String) = {
     logger.info("Creating Sockets...")
     val client = system.actorOf(Props(new Client(address)), "Client")
@@ -33,7 +33,7 @@ object Client {
 }
 
 private class Client(address: String) extends Actor {
-  val request = context.system.newSocket(SocketType.Req, Connect(address), Listener(self))
+  private val request = context.system.newSocket(SocketType.Req, Connect(address), Listener(self))
 
   def receive = {
     case m: String =>

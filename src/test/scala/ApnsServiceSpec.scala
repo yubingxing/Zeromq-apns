@@ -8,8 +8,8 @@ import akka.testkit.TestKit
 import com.icestar.Apn
 import com.notnoop.apns.APNS
 
-class ZMQActorSpec(_system: ActorSystem) extends TestKit(_system) with ImplicitSender with FunSpec with BeforeAndAfter {
-  def this() = this(ActorSystem("ZQActorSpec"))
+class ApnsServiceSpec(_system: ActorSystem) extends TestKit(_system) with ImplicitSender with FunSpec with BeforeAndAfter {
+  def this() = this(ActorSystem("ApnsServiceSpec"))
 
   val address = "tcp://0.0.0.0:5566"
   val client_address = "tcp://127.0.0.1:5566"

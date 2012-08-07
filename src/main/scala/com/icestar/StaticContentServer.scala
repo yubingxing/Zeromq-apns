@@ -1,5 +1,6 @@
 package com.icestar
 import java.io.File
+
 import org.mashupbots.socko.events.HttpRequestEvent
 import org.mashupbots.socko.handlers.StaticContentHandler
 import org.mashupbots.socko.handlers.StaticContentHandlerConfig
@@ -10,16 +11,18 @@ import org.mashupbots.socko.routes.PathSegments
 import org.mashupbots.socko.routes.Routes
 import org.mashupbots.socko.webserver.WebServer
 import org.mashupbots.socko.webserver.WebServerConfig
+
+import com.typesafe.config.ConfigFactory
+
 import akka.actor.actorRef2Scala
 import akka.actor.ActorRef
 import akka.actor.ActorSystem
 import akka.actor.Props
 import akka.routing.FromConfig
-import com.typesafe.config.ConfigFactory
 
 object StaticContentServer {
-  val actorSystem = ActorSystem("staticContentServer")
-  val routes = Routes({
+  private val actorSystem = ActorSystem("staticContentServer")
+  private val routes = Routes({
     case event @ GET(PathSegments("files" :: relativePath)) => {
       val request = new StaticFileRequest(
         event.asInstanceOf[HttpRequestEvent],
@@ -33,20 +36,17 @@ object StaticContentServer {
       router ! request
     }
   })
-  var rootDir: File = null
-  var tempDir: File = null
-  var router: ActorRef = null
-  var webServer: WebServer = null
+  private var rootDir: File = null
+  private var tempDir: File = null
+  private var router: ActorRef = null
+  private var webServer: WebServer = null
 
   def apply() = {
     val conf = ConfigFactory.load
     // Create root and temp dir
-    println(conf.getString("staticContentServer.rootPath"))
-    rootDir = File.createTempFile(conf.getString("staticContentServer.rootPath"), "")
-    if (!rootDir.exists())
-      rootDir.mkdir()
-    tempDir = File.createTempFile(conf.getString("staticContentServer.tmpPath"), "")
-    tempDir.delete()
+    rootDir = new File(conf.getString("staticContentServer.rootPath"))
+    rootDir.mkdir()
+    tempDir = new File(conf.getString("staticContentServer.tmpPath"))
     tempDir.mkdir()
 
     StaticContentHandlerConfig.rootFilePaths = Seq(rootDir.getAbsolutePath);
@@ -56,10 +56,24 @@ object StaticContentServer {
 
     // Start routers 
     router = actorSystem.actorOf(Props[StaticContentHandler].
-      withRouter(FromConfig()).withDispatcher("my-pinned-dispatcher"))
+      withRouter(FromConfig()).withDispatcher("my-pinned-dispatcher"), "my-router")
 
     // Start web server
     webServer = new WebServer(new WebServerConfig(conf, "staticContentServer"),
       routes, actorSystem)
+    webServer.start()
+  }
+
+  def stop() {
+    webServer.stop()
+    if (router != null) {
+      actorSystem.stop(router)
+      router = null
+    }
+    if (tempDir != null) {
+      FileUtils.deleteDirectory(tempDir)
+      tempDir = null
+    }
+    actorSystem.shutdown()
   }
 }

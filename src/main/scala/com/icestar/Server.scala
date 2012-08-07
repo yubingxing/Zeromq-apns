@@ -22,7 +22,7 @@ import akka.zeromq.ZMQMessage
  * @author IceStar
  */
 object Server {
-  val logger = LoggerFactory.getLogger(getClass)
+  private val logger = LoggerFactory.getLogger(getClass)
 
   def apply(system: ActorSystem, address: String) = {
     logger.info("Creating Sockets...")
@@ -45,13 +45,13 @@ object Server {
   }
 }
 private class Server(address: String) extends Actor with ActorLogging {
-  val APN_GAMES_MAP = "APN_GAMES_MAP"
-  val repSocket = context.system.newSocket(SocketType.Rep, Bind(address), Listener(self))
-  val SetCommand = """set (.+)::(.+)""".r
-  val APNCommand = """apnset (.+)""".r
-  val GetCommand = """get (.+)""".r
-  val GetAllGameIds = "getAllGameIds"
-  val GetAllGameContents = "getAllGameContents"
+  private val APN_GAMES_MAP = "APN_GAMES_MAP"
+  private val repSocket = context.system.newSocket(SocketType.Rep, Bind(address), Listener(self))
+  private val SetCommand = """set (.+)::(.+)""".r
+  private val APNCommand = """apnset (.+)""".r
+  private val GetCommand = """get (.+)""".r
+  private val GetAllGameIds = "getAllGameIds"
+  private val GetAllGameContents = "getAllGameContents"
 
   override def preStart() = {
     log.debug("ZMQActor Starting")

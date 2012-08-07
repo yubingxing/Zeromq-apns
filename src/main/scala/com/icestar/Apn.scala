@@ -3,13 +3,14 @@ import org.slf4j.LoggerFactory
 
 import com.notnoop.apns.APNS
 import com.notnoop.apns.ApnsService
+import com.notnoop.apns.ReconnectPolicy.Provided.EVERY_HALF_HOUR
 
 /**
  * Apn utils
  * @author IceStar
  */
 object Apn {
-  var map = Map[String, Apn]()
+  private var map = Map[String, Apn]()
 
   def apply(gameId: String, cert: String, pass: String) = {
     var apn: Apn = null
@@ -25,9 +26,9 @@ object Apn {
 
 }
 class Apn private (val gameId: String, val cert: String, val pass: String) {
-  val logger = LoggerFactory.getLogger(getClass)
-  //  val service = APNS.newService().withCert(cert, pass).withReconnectPolicy(EVERY_HALF_HOUR).withProductionDestination().withSandboxDestination().build()
-  val service = APNS.newService().withCert(cert, pass).withSandboxDestination().build()
+  private val logger = LoggerFactory.getLogger(getClass)
+  private val service = APNS.newService().withCert(cert, pass).withReconnectPolicy(EVERY_HALF_HOUR).withProductionDestination().withSandboxDestination().build()
+//  val service = APNS.newService().withCert(cert, pass).withSandboxDestination().build()
 
   def send(token: String, payload: String, expiry: Int = 30000) {
     if (service != null) {
