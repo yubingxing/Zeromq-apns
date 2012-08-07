@@ -68,6 +68,10 @@ object RedisPool {
 	  clients.withClient(client => client.hvals(key) get)
   }
   
+  def hdel(key: Any, field: Any, fields: Any*) = {
+	  clients.withClient(client => client.hdel(key, field, fields))
+  }
+  
   def hlen(key: Any) = {
     clients.withClient(client => client.hlen(key) get)
   }

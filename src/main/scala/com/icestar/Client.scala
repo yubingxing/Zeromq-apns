@@ -1,6 +1,8 @@
 package com.icestar
 import org.slf4j.LoggerFactory
 
+import com.typesafe.config.ConfigFactory
+
 import akka.actor.actorRef2Scala
 import akka.actor.Actor
 import akka.actor.ActorSystem
@@ -22,15 +24,17 @@ object Client {
   }
 
   def test() = {
-    val system = ActorSystem("ZMQ-CLIENT")
-    val client = Client(system, "tcp://127.0.0.1:5566")
+    val system = ActorSystem("apnclient")
+    val conf = ConfigFactory.load()
+    val client = Client(system, conf.getString("apnclient.address"))
     client ! """set hahahaha::{"test":"testesttest"}"""
     system.shutdown()
   }
 }
 
-class Client(address: String) extends Actor {
+private class Client(address: String) extends Actor {
   val request = context.system.newSocket(SocketType.Req, Connect(address), Listener(self))
+
   def receive = {
     case m: String =>
       println("[Send]:: " + m)

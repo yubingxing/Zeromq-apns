@@ -1,5 +1,8 @@
 {
 	"address":"tcp://0.0.0.0:5566",
+	"staticContentServerHost":"0.0.0.0",
+	"staticContentServerPort":5567,
+	"uploadPath":"/upload/certs",
 	"redis":{
 		"host":"127.0.0.1",
 		"port":6379
