@@ -1,9 +1,7 @@
 package com.icestar
 
 import org.slf4j.LoggerFactory
-
 import com.typesafe.config.ConfigFactory
-
 import akka.actor.actorRef2Scala
 import akka.actor.Actor
 import akka.actor.ActorLogging
@@ -16,6 +14,7 @@ import akka.zeromq.Frame
 import akka.zeromq.Listener
 import akka.zeromq.SocketType
 import akka.zeromq.ZMQMessage
+import akka.actor.ActorRef
 
 /**
  * Server boot class
@@ -23,12 +22,13 @@ import akka.zeromq.ZMQMessage
  */
 object Server {
   private val logger = LoggerFactory.getLogger(getClass)
+  var actor: ActorRef = _
 
   def apply(system: ActorSystem, address: String) = {
     logger.info("Creating Sockets...")
-    val server = system.actorOf(Props(new Server(address)), "Server")
+    actor = system.actorOf(Props(new Server(address)), "Server")
     logger.info("Socket created success.")
-    server
+    actor
   }
 
   def main(args: Array[String]) = {
