@@ -4,6 +4,8 @@ version := "1.0"
 
 scalaVersion := "2.9.2"
 
+organization := "com.icestar"
+
 resolvers ++= Seq(
 	Classpaths.typesafeResolver,
 	"Sonatype OSS Snapshots" at "https://oss.sonatype.org/content/repositories/snapshots/"

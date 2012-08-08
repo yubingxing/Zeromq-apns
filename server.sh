@@ -10,5 +10,5 @@ mylib="`dirname $mydir`"/lib
 libs=`echo "$mylib"/*.jar "$mydir"/conf | sed 's/ /:/g'`
 
 daemon \
-  -n iphonenotifier \
-  java -classpath $libs com.notnoop.notifier.Boot "$@"
+  -n zmq-apnserver \
+  java -server -XX:+CMSClassUnloadingEnabled -XX:MaxPermSize=1536m -Xmx1024M -Xss4M -classpath $libs com.notnoop.notifier.Boot "$@"
