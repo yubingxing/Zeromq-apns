@@ -21,7 +21,7 @@ libraryDependencies ++= Seq(
 	"com.alibaba" % "fastjson" % "1.1.22" % "compile" withSources(),
 	"com.notnoop.apns" % "apns" % "0.1.6" withSources(),
 	"com.typesafe.akka" % "akka-testkit" % "2.0.2" % "test",
-	"org.scalatest" % "scalatest_2.9.0" % "1.8" % "test",
+	"org.scalatest" %% "scalatest" % "2.0.M2" % "test",
 	"org.mockito" % "mockito-all" % "1.9.0" % "test",
 	"com.redis" % "scala-redis" % "1.0" from "http://cloud.github.com/downloads/yubingxing/scala-redis/scala-redis_2.9.2-1.0.jar",
 	"org.mashupbots.socko" % "socko-webserver_2.9.1" % "0.2.0" withSources()

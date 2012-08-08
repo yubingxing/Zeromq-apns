@@ -8,6 +8,31 @@ persistent connections to Apple servers.  Clients of the service, simply need
 to enqueue notifications requests in a ZMQ queue.
 ![Image](http://d1xzuxjlafny7l.cloudfront.net/wp-content/uploads/2011/05/Push-Overview.jpg)
 
+##Ubuntu
+On Ubuntu, it is easy to build both packages from source, if you follow the proper recipe (below).
+You should build the [Java bindings repository](https://launchpad.net/~tuomjarv/+archive/jzmq) from source because the
+package archive has not been updated in over a year, so it is not up to date.
+
+FYI, here is how to add the old ZeroMQ repository.
+I don't think you should use it because you should build the Java bindings anyway, and the versions of the two packages should match.
+
+````
+sudo add-apt-repository ppa:chris-lea/zeromq
+sudo aptitude install libzmq-dev
+````
+
+### Building from source
+````
+chmod 755 autogenZMQfromSrc.sh
+./autogenZMQfromSrc.sh
+````
+
+## Mac
+````
+chmod 755 autogenZMQonMac.sh
+./autogenZMQonMac.sh
+````
+
 ##How to add sbteclipse
 =========================
 sbt eclipse 
@@ -30,17 +55,31 @@ Running:
 A configuration file is needed to set server bind address, and the redis host and port
 is needed too, you also can set multi game push notification settings, contains the "certificate"
 and "passwd" key.
-the Conf file would look like
-{
-	"address":"tcp://127.0.0.1:5566",
-	"redis":{
-		"host":"127.0.0.1",
-		"port":6379
-	},
-	"test":{
-		"certificate":"/path/to/cert.p12",
-		"passwd":"cert_password"
-	}
+the application.conf file would look like
+
+apnserver {
+  address = "tcp://0.0.0.0:5566"
+  akka.loglevel = DEBUG
+}
+staticContentServer {
+  akka.loglevel = DEBUG
+  server-name = "staticContentServer"
+  hostname = "0.0.0.0"
+  port = 5567
+  rootPath = "upload"
+  tmpPath = "tmp"
+}
+my-pinned-dispatcher {
+  type=PinnedDispatcher
+  executor=thread-pool-executor
+}
+apnclient {
+  address = "tcp://127.0.0.1:5566"
+  akka.loglevel = DEBUG
+}
+redis {
+  host = "127.0.0.1"
+  port = 6379
 }
 
 ##Expected Message Format
@@ -77,3 +116,9 @@ Sample message:
     },
     "acme" : "foo"
 }
+
+##Running
+````
+chmod 755 server.sh
+./server.sh
+````

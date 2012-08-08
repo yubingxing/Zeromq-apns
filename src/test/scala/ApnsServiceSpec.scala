@@ -54,7 +54,7 @@ class ApnsServiceSpec(_system: ActorSystem) extends TestKit(_system) with Should
 
   it("should send push notifications success") {
     val apn = Apn("com.huale.PushNotificatinsDemo", "cert/pushdemo_aps.p12", "huale@hefei.")
-    var token = "7f3addce7e9d7780eae3bc099d08c68144f93f11b4f6a645fdf5eaa65ab28617"
+    var token = "44c551bb46d9e0e6de47feb1c2e3b0acaf1ac797ba6d39bc2d28f228f691042b"
     val payload = """{
 	    "aps" : {
 	        "alert" : "This is a test notifications.",
@@ -67,8 +67,8 @@ class ApnsServiceSpec(_system: ActorSystem) extends TestKit(_system) with Should
     //    val payload = APNS.newPayload().alertBody("This is a test notifications.").build();
     apn.send(token, payload);
 
-    token = "44c551bb46d9e0e6de47feb1c2e3b0acaf1ac797ba6d39bc2d28f228f691042b"
-    apn.send(token, payload);
+//    token = "7f3addce7e9d7780eae3bc099d08c68144f93f11b4f6a645fdf5eaa65ab28617"
+//    apn.send(token, payload);
   }
 
   it("should correctly HTTP GET a small file") {
