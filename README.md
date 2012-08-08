@@ -56,7 +56,7 @@ A configuration file is needed to set server bind address, and the redis host an
 is needed too, you also can set multi game push notification settings, contains the "certificate"
 and "passwd" key.
 the application.conf file would look like
-
+````
 apnserver {
   address = "tcp://0.0.0.0:5566"
   akka.loglevel = DEBUG
@@ -81,7 +81,7 @@ redis {
   host = "127.0.0.1"
   port = 6379
 }
-
+````
 ##Expected Message Format
 ==========================
 The Apple APNs server expects JSON messages, that contain these properties:
