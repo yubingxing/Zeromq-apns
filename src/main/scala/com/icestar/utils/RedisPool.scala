@@ -1,4 +1,4 @@
-package com.icestar
+package com.icestar.utils
 import com.redis.RedisClientPool
 
 /**
@@ -32,6 +32,10 @@ object RedisPool {
     clients.withClient(client => client.rpop(key))
   }
 
+  def lrem(key: Any, count: Int, value: Any) = {
+    clients.withClient(client => client.lrem(key, count, value))
+  }
+
   def llen(key: Any) = {
     clients.withClient(client => client.llen(key) get)
   }
@@ -44,6 +48,10 @@ object RedisPool {
     clients.withClient(client => client.get(key) get)
   }
 
+  def hexists(key: Any, field: Any) = {
+    clients.withClient(client => client.hexists(key, field))
+  }
+
   def hset(key: Any, field: Any, value: Any) = {
     clients.withClient(client => client.hset(key, field, value))
   }
@@ -51,27 +59,31 @@ object RedisPool {
   def hget(key: Any, field: Any) = {
     clients.withClient(client => client.hget(key, field) get)
   }
-  
+
   def hmset(key: Any, map: Map[String, String]) = {
-	  clients.withClient(client => client.hmset(key, map))
+    clients.withClient(client => client.hmset(key, map))
   }
 
   def hmget(key: Any, fields: Array[String]) = {
-	  clients.withClient(client => client.hmget(key, fields) get)
+    clients.withClient(client => client.hmget(key, fields) get)
   }
-  
+
   def hkeys(key: Any) = {
-	  clients.withClient(client => client.hkeys(key) get)
+    clients.withClient(client => client.hkeys(key) get)
   }
-  
+
   def hvals(key: Any) = {
-	  clients.withClient(client => client.hvals(key) get)
+    clients.withClient(client => client.hvals(key) get)
   }
-  
+
+  def hgetall[K, V](key: Any) = {
+    clients.withClient(client => client.hgetall(key) get)
+  }
+
   def hdel(key: Any, field: Any, fields: Any*) = {
-	  clients.withClient(client => client.hdel(key, field, fields))
+    clients.withClient(client => client.hdel(key, field, fields))
   }
-  
+
   def hlen(key: Any) = {
     clients.withClient(client => client.hlen(key) get)
   }

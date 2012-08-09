@@ -3,6 +3,7 @@ import scala.collection.mutable.HashMap
 
 import org.slf4j.LoggerFactory
 
+import com.icestar.utils.RedisPool
 import com.notnoop.apns.ReconnectPolicy.Provided.EVERY_HALF_HOUR
 import com.notnoop.apns.APNS
 import com.notnoop.apns.ApnsService

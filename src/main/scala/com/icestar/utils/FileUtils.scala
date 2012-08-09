@@ -1,4 +1,4 @@
-package com.icestar
+package com.icestar.utils
 import java.io.File
 import java.io.PrintStream
 

@@ -11,10 +11,9 @@ import org.scalatest.matchers.ShouldMatchers
 import org.scalatest.BeforeAndAfter
 import org.scalatest.FunSpec
 
+import com.icestar.utils.FileUtils
+import com.icestar.utils.RedisPool
 import com.icestar.Apn
-import com.icestar.Conf
-import com.icestar.FileUtils
-import com.icestar.RedisPool
 import com.icestar.StaticContentServer
 import com.typesafe.config.ConfigFactory
 
@@ -44,13 +43,13 @@ class ApnsServiceSpec(_system: ActorSystem) extends TestKit(_system) with Should
     assert(RedisPool.get("test") === "testing")
   }
 
-  it("Should reading conf data") {
-    println("-----------------------------------")
-    Conf.read("src/main/resources/conf")
-    assert(Conf.get("address") === "tcp://0.0.0.0:5566")
-    assert(Conf.get("redis", "host") === "127.0.0.1")
-    assert(Conf.get("redis", "port") === 6379)
-  }
+  //  it("Should reading conf data") {
+  //    println("-----------------------------------")
+  //    Conf.read("src/main/resources/conf")
+  //    assert(Conf.get("address") === "tcp://0.0.0.0:5566")
+  //    assert(Conf.get("redis", "host") === "127.0.0.1")
+  //    assert(Conf.get("redis", "port") === 6379)
+  //  }
 
   it("should send push notifications success") {
     val apn = Apn("com.huale.PushNotificatinsDemo", "cert/pushdemo_aps.p12", "huale@hefei.")
@@ -67,8 +66,8 @@ class ApnsServiceSpec(_system: ActorSystem) extends TestKit(_system) with Should
     //    val payload = APNS.newPayload().alertBody("This is a test notifications.").build();
     apn.send(token, payload);
 
-//    token = "7f3addce7e9d7780eae3bc099d08c68144f93f11b4f6a645fdf5eaa65ab28617"
-//    apn.send(token, payload);
+    //    token = "7f3addce7e9d7780eae3bc099d08c68144f93f11b4f6a645fdf5eaa65ab28617"
+    //    apn.send(token, payload);
   }
 
   it("should correctly HTTP GET a small file") {

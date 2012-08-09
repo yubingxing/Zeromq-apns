@@ -1,4 +1,4 @@
-package com.icestar
+package com.icestar.utils
 
 /**
  * Array utils

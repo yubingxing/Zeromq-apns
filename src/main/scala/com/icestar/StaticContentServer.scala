@@ -1,6 +1,7 @@
 package com.icestar
 import java.io.File
 
+import org.apache.commons.io.FileUtils
 import org.mashupbots.socko.events.HttpRequestEvent
 import org.mashupbots.socko.handlers.StaticContentHandler
 import org.mashupbots.socko.handlers.StaticContentHandlerConfig

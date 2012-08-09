@@ -1,4 +1,4 @@
-package com.icestar
+package com.icestar.utils
 import scala.io.Source
 
 import com.alibaba.fastjson.JSON
