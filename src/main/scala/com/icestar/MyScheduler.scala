@@ -46,12 +46,17 @@ class MyScheduler private (system: ActorSystem, gameId: String, key: String) ext
       else
         ScheduleMap += (_key ->
           system.scheduler.scheduleOnce(start, Server.actor, ""))
+      content.put("activate", true)
+      RedisPool.hset(gameId, key, content toJSONString)
     }
   }
 
   def stop() = {
-    if (sdl != null)
-      sdl cancel
+    if (sdl != null) {
+      sdl cancel;
+      content.put("activate", false)
+      RedisPool.hset(gameId, key, content toJSONString)
+    }
   }
 
   def delete() = {
