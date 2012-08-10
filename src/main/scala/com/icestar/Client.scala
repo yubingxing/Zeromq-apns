@@ -32,7 +32,7 @@ object Client {
   }
 }
 
-private class Client(address: String) extends Actor {
+class Client(address: String) extends Actor {
   private val request = context.system.newSocket(SocketType.Req, Connect(address), Listener(self))
 
   def receive = {

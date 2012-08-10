@@ -1,31 +1,35 @@
-import java.io.File
-import java.net.HttpURLConnection
-import java.net.URL
-import java.text.SimpleDateFormat
-import java.util.Date
-import java.util.TimeZone
+import scala.collection.immutable.Vector
 
-import org.mashupbots.socko.handlers.StaticContentHandlerConfig
 import org.mashupbots.socko.infrastructure.Logger
 import org.scalatest.matchers.ShouldMatchers
 import org.scalatest.BeforeAndAfter
 import org.scalatest.FunSpec
 
-import com.icestar.utils.FileUtils
 import com.icestar.utils.RedisPool
-import com.icestar.Apn
-import com.icestar.StaticContentServer
+import com.icestar.Server
 import com.typesafe.config.ConfigFactory
 
+import akka.actor.actorRef2Scala
+import akka.actor.ActorRef
 import akka.actor.ActorSystem
 import akka.testkit.ImplicitSender
+import akka.testkit.TestActorRef
 import akka.testkit.TestKit
+import akka.zeromq.zeromqSystem
+import akka.zeromq.Connect
+import akka.zeromq.Connecting
+import akka.zeromq.Frame
+import akka.zeromq.Listener
+import akka.zeromq.SocketType
+import akka.zeromq.ZMQMessage
 
 class ApnsServiceSpec(_system: ActorSystem) extends TestKit(_system) with ShouldMatchers with ImplicitSender with FunSpec with BeforeAndAfter with TestHttpClient with Logger {
   def this() = this(ActorSystem("ApnsServiceSpec"))
 
   val address = "tcp://0.0.0.0:5566"
   val client_address = "tcp://127.0.0.1:5566"
+  val cert_path = "upload/cert/"
+  var client: ActorRef = _
 
   after {
     //    RedisPool.flushdb()
@@ -33,6 +37,14 @@ class ApnsServiceSpec(_system: ActorSystem) extends TestKit(_system) with Should
 
   before {
     RedisPool.init("127.0.0.1", 6379)
+  }
+
+  def reconnect() {
+    client = _system.newSocket(SocketType.Req, Connect(client_address), Listener(self))
+  }
+
+  def send(msg: String) = {
+    client ! ZMQMessage(Seq(Frame(msg)))
   }
 
   it("should save value by RedisPool") {
@@ -50,9 +62,9 @@ class ApnsServiceSpec(_system: ActorSystem) extends TestKit(_system) with Should
     assert(conf.getString("redis.host") === "127.0.0.1")
     assert(conf.getInt("redis.port") === 6379)
   }
-
+  /*
   it("should send push notifications success") {
-    val apn = Apn("com.huale.PushNotificatinsDemo", "cert/pushdemo_aps.p12", "huale@hefei.")
+    val apn = Apn("com.huale.PushNotificatinsDemo", cert_path + "pushdemo_aps.p12", "huale@hefei.")
     var token = "44c551bb46d9e0e6de47feb1c2e3b0acaf1ac797ba6d39bc2d28f228f691042b"
     val payload = """{
 	    "aps" : {
@@ -63,42 +75,65 @@ class ApnsServiceSpec(_system: ActorSystem) extends TestKit(_system) with Should
 		    "acme1" : "bar",
 		    "acme2" : 42
 		}"""
-    //    val payload = APNS.newPayload().alertBody("This is a test notifications.").build();
-    apn.send(token, payload);
+    //    val payload = APNS.newPayload().alertBody("This is a test notifications.").build()
+    apn.send(token, payload)
 
     //    token = "7f3addce7e9d7780eae3bc099d08c68144f93f11b4f6a645fdf5eaa65ab28617"
-    //    apn.send(token, payload);
+    //    apn.send(token, payload)
+  }
+*/
+  it("should response ok to set app") {
+    TestActorRef(new Server(address))
+    reconnect()
+    expectMsg(Connecting)
+    send("""app com.ice.test::{"name":"TestDemo", "cert":"pushdemo_aps.p12", "passwd":"huale@hefei.", "priority":0}""")
+    expectMsg(ZMQMessage(Seq(Frame("OK"))))
+    send("""app com.ice.test2::{"name":"TestDemo2", "cert":"pushdemo_aps.p12", "passwd":"huale@hefei.", "priority":0}""")
+    expectMsg(ZMQMessage(Seq(Frame("OK"))))
+    send("tettesttestestseljljskl")
+    expectMsg(ZMQMessage(Seq(Frame("error"))))
+    send("getapps")
+    expectMsg(ZMQMessage(Vector(Frame("""{"com.ice.test":"{"name":"TestDemo", "cert":"pushdemo_aps.p12", "passwd":"huale@hefei.", "priority":0}","com.ice.test2":"{"name":"TestDemo2", "cert":"pushdemo_aps.p12", "passwd":"huale@hefei.", "priority":0}"}"""))))
   }
 
-//  it("should correctly HTTP GET a small file") {
-//    val contentServer = StaticContentServer()
-//    contentServer start
-//    val rootDir = new File(ConfigFactory.load().getString("staticContentServer.rootPath"));
-//    val content = "test data test data test data"
-//    val file = new File(rootDir, "gettext1.txt")
-//    FileUtils.writeTextFile(file, content)
-//    println(contentServer.path)
-//    val url = new URL(contentServer.path + "files/gettext1.txt")
-//    val conn = url.openConnection().asInstanceOf[HttpURLConnection]
-//    val resp = getResponseContent(conn)
-//    log.debug(resp.toString)
-//
-//    resp.status should equal("200")
-//    resp.content should equal(content)
-//    resp.headers("Date").length should be > 0
-//    resp.headers("Content-type") should equal("text/plain")
-//    resp.headers("Cache-Control") should equal("private, max-age=60")
-//
-//    val fmt = new SimpleDateFormat("EEE, dd MMM yyyy HH:mm:ss zzz")
-//    fmt setTimeZone TimeZone.getTimeZone("GMT")
-//    resp.headers("Last-Modified") should equal(fmt.format(new Date(file.lastModified())))
-//
-//    val x = resp.headers("Date")
-//    val date = fmt.parse(resp.headers("Date"))
-//    val expires = fmt.parse(resp.headers("Expirres"))
-//    (expires.getTime - date.getTime) should equal(StaticContentHandlerConfig.browserCacheTimeoutSeconds * 1000)
-//  }
-  
+  it("should response ok to receive token") {
+    TestActorRef(new Server(address))
+    reconnect()
+    send("token com.ice.test::7f3addce7e9d7780eae3bc099d08c68144f93f11b4f6a645fdf5eaa65ab28617")
+    expectMsg(ZMQMessage(Seq(Frame("OK"))))
+    send("token com.ice.test::44c551bb46d9e0e6de47feb1c2e3b0acaf1ac797ba6d39bc2d28f228f691042b")
+    expectMsg(ZMQMessage(Seq(Frame("OK"))))
+  }
+
+  //  it("should correctly HTTP GET a small file") {
+  //    val contentServer = StaticContentServer()
+  //    contentServer start
+  //    val rootDir = new File(ConfigFactory.load().getString("staticContentServer.rootPath"));
+  //    val content = "test data test data test data"
+  //    val file = new File(rootDir, "gettext1.txt")
+  //    FileUtils.writeTextFile(file, content)
+  //    println(contentServer.path)
+  //    val url = new URL(contentServer.path + "files/gettext1.txt")
+  //    val conn = url.openConnection().asInstanceOf[HttpURLConnection]
+  //    val resp = getResponseContent(conn)
+  //    log.debug(resp.toString)
+  //
+  //    resp.status should equal("200")
+  //    resp.content should equal(content)
+  //    resp.headers("Date").length should be > 0
+  //    resp.headers("Content-type") should equal("text/plain")
+  //    resp.headers("Cache-Control") should equal("private, max-age=60")
+  //
+  //    val fmt = new SimpleDateFormat("EEE, dd MMM yyyy HH:mm:ss zzz")
+  //    fmt setTimeZone TimeZone.getTimeZone("GMT")
+  //    resp.headers("Last-Modified") should equal(fmt.format(new Date(file.lastModified())))
+  //
+  //    val x = resp.headers("Date")
+  //    val date = fmt.parse(resp.headers("Date"))
+  //    val expires = fmt.parse(resp.headers("Expirres"))
+  //    (expires.getTime - date.getTime) should equal(StaticContentHandlerConfig.browserCacheTimeoutSeconds * 1000)
+  //  }
+
   //  it("should respond with ok to valid message") {
   //    println("-----------------------------------")
   ////    val actor = TestActorRef(new ZMQActor(address))
