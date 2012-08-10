@@ -2,6 +2,7 @@ package com.icestar
 
 import org.slf4j.LoggerFactory
 
+import com.alibaba.fastjson.JSONObject
 import com.icestar.utils.RedisPool
 import com.typesafe.config.ConfigFactory
 
@@ -56,13 +57,12 @@ private class Server(address: String) extends Actor with ActorLogging {
   //*******************************************************// 
   private val repSocket = context.system.newSocket(SocketType.Rep, Bind(address), Listener(self))
   private val CMD_SET_APP = """set (.+)::(.+)""".r
-  private val CMD_SET_PAYLOAD = """apnset (.+)""".r
+  private val CMD_GET_ALL_APPS = "getApps"
+  private val CMD_SET_PAYLOAD = """payload (.+)""".r
   private val CMD_RECEIVE_TOKEN = """token (.+)::(.+)""".r
   private val CMD_GET_TOKENS = """tokens (.+)""".r
   private val CMD_GET_TOKENS_COUNT = """tokens_count (.+)""".r
   private val CMD_SEND_MSG = """send (.+)::(.+)""".r
-  private val CMD_GET_ALL_APPS = "getAllGameIds"
-  private val CMD_GET_ALL_PAYLOADS = "getAllGameContents"
 
   override def preStart() = {
     log.debug("ZMQActor Starting")
@@ -88,7 +88,8 @@ private class Server(address: String) extends Actor with ActorLogging {
           // get appid stored tokens count
           repSocket ! ZMQMessage(Seq(Frame(RedisPool.hlen(TOKENS + appId) toString)))
         case CMD_SEND_MSG(appId, key) =>
-
+          // send msg to all the stored device tokens of the appId
+          
         case CMD_SET_APP(appId, data) =>
           // set appid base data
           RedisPool.hset(APN_APPS_MAP, appId, data)
@@ -98,19 +99,19 @@ private class Server(address: String) extends Actor with ActorLogging {
           RedisPool.set(key, value)
           repSocket ! ZMQMessage(Seq(Frame("ok")))
         case CMD_GET_ALL_APPS =>
-          val data = RedisPool.hkeys(APN_APPS_MAP)
-          var seq: Seq[Frame] = Seq()
-          data.foreach(s => {
-            seq ++= Seq(Frame(s))
+          val data = RedisPool.hgetall(APN_APPS_MAP)
+          val content: JSONObject = new JSONObject
+          data.foreach(e => {
+            content.put(e._1, e._2)
           })
-          repSocket ! ZMQMessage(seq)
-        case CMD_GET_ALL_PAYLOADS =>
-          val data = RedisPool.hvals(APN_APPS_MAP)
-          var seq: Seq[Frame] = Seq()
-          data.foreach(s => {
-            seq ++= Seq(Frame(s))
-          })
-          repSocket ! ZMQMessage(seq)
+          repSocket ! ZMQMessage(Seq(Frame(content.toJSONString())))
+        //        case CMD_GET_ALL_PAYLOADS =>
+        //          val data = RedisPool.hvals(APN_APPS_MAP)
+        //          var seq: Seq[Frame] = Seq()
+        //          data.foreach(s => {
+        //            seq ++= Seq(Frame(s))
+        //          })
+        //          repSocket ! ZMQMessage(seq)
         case _ => sender ! ZMQMessage(Seq(Frame("error")))
       }
     case x => log.warning("Received unknown message: {}", x)
