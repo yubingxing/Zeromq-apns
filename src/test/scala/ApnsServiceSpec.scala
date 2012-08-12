@@ -51,6 +51,8 @@ class ApnsServiceSpec(_system: ActorSystem) extends TestKit(_system) with Should
     RedisPool.set("test", "testing")
     println(RedisPool.get("test"))
     assert(RedisPool.get("test") === "testing")
+    println(RedisPool get "None")
+    assert(RedisPool.get("None") == null)
   }
 
   it("Should reading conf data") {

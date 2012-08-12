@@ -25,19 +25,19 @@ object RedisPool {
   }
 
   def lpop(key: Any) = {
-    clients.withClient(client => client.lpop(key))
+    clients.withClient(client => client.lpop(key)) getOrElse null
   }
 
   def rpop(key: Any) = {
-    clients.withClient(client => client.rpop(key))
+    clients.withClient(client => client.rpop(key)) getOrElse null
   }
 
   def lrem(key: Any, count: Int, value: Any) = {
-    clients.withClient(client => client.lrem(key, count, value))
+    clients.withClient(client => client.lrem(key, count, value)) getOrElse null
   }
 
   def llen(key: Any) = {
-    clients.withClient(client => client.llen(key) get)
+    clients.withClient(client => client.llen(key)) getOrElse 0
   }
 
   def set(key: Any, value: Any) = {
@@ -45,7 +45,7 @@ object RedisPool {
   }
 
   def get(key: Any) = {
-    clients.withClient(client => client.get(key) get)
+    clients.withClient(client => client.get(key)) getOrElse null
   }
 
   def hexists(key: Any, field: Any) = {
@@ -57,7 +57,7 @@ object RedisPool {
   }
 
   def hget(key: Any, field: Any) = {
-    clients.withClient(client => client.hget(key, field) get)
+    clients.withClient(client => client.hget(key, field)) getOrElse null
   }
 
   def hmset(key: Any, map: Map[String, String]) = {
@@ -65,27 +65,27 @@ object RedisPool {
   }
 
   def hmget(key: Any, fields: Array[String]) = {
-    clients.withClient(client => client.hmget(key, fields) get)
+    clients.withClient(client => client.hmget(key, fields)) getOrElse null
   }
 
   def hkeys(key: Any) = {
-    clients.withClient(client => client.hkeys(key) get)
+    clients.withClient(client => client.hkeys(key)) getOrElse null
   }
 
   def hvals(key: Any) = {
-    clients.withClient(client => client.hvals(key) get)
+    clients.withClient(client => client.hvals(key)) getOrElse null
   }
 
   def hgetall[K, V](key: Any) = {
-    clients.withClient(client => client.hgetall(key) get)
+    clients.withClient(client => client.hgetall(key)) getOrElse null
   }
 
   def hdel(key: Any, field: Any, fields: Any*) = {
-    clients.withClient(client => client.hdel(key, field, fields))
+    clients.withClient(client => client.hdel(key, field, fields)) getOrElse null
   }
 
   def hlen(key: Any) = {
-    clients.withClient(client => client.hlen(key) get)
+    clients.withClient(client => client.hlen(key)) getOrElse 0
   }
 
   def flushdb() = {
