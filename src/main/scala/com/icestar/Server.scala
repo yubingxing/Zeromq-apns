@@ -4,6 +4,7 @@ import org.slf4j.LoggerFactory
 
 import com.alibaba.fastjson.serializer.SerializerFeature
 import com.alibaba.fastjson.JSON
+import com.icestar.utils.crypto.MD5
 import com.icestar.utils.RedisPool
 import com.typesafe.config.ConfigFactory
 
@@ -56,14 +57,15 @@ class Server(address: String) extends Actor with ActorLogging {
   private val repSocket = context.system.newSocket(SocketType.Rep, Bind(address), Listener(self))
   //***************************CONSTANTS****************************//
   private val APN_APPS_MAP = "APN_APPS_MAP"
-  private val APN_APPS_PAYLOADS = "APN_APPS_PAYLOADS"
+  private val PAYLOADS = "PAYLOADS_"
   private val TOKENS = "TOKENS_"
   //**************************MSG COMMANDS*****************************// 
   private val CMD_SET_APP = """app (.+)::(.+)""".r
   private val CMD_GET_ALL_APPS = "getapps"
-  private val CMD_SET_PAYLOAD = """payload (.+)""".r
-  private val CMD_RECEIVE_TOKEN = """tOKen (.+)::(.+)""".r
-  private val CMD_GET_TOKENS = """tOKens (.+)""".r
+  private val CMD_SET_PAYLOAD = """payload (.+)::(.+)""".r
+  private val CMD_GET_PAYLOADS = """payloads (.+)""".r
+  private val CMD_RECEIVE_TOKEN = """token (.+)::(.+)""".r
+  private val CMD_GET_TOKENS = """tokens (.+)""".r
   private val CMD_GET_TOKENS_COUNT = """tOKens_count (.+)""".r
   private val CMD_SEND_MSG = """send (.+)::(.+)""".r
 
@@ -84,7 +86,6 @@ class Server(address: String) extends Actor with ActorLogging {
         case CMD_RECEIVE_TOKEN(appId, tOKen) =>
           // receive from iphone/ipad device tOKen
           RedisPool.hset(TOKENS + appId, tOKen, true)
-          repSocket ! ZMQMessage(Seq(Frame("OK")))
         case CMD_GET_TOKENS(appId) =>
           val data = RedisPool.hkeys(TOKENS + appId)
           if (data != null) {
@@ -98,8 +99,12 @@ class Server(address: String) extends Actor with ActorLogging {
           // get appid stored tOKens count
           repSocket ! ZMQMessage(Seq(Frame(RedisPool.hlen(TOKENS + appId) toString)))
         case CMD_SEND_MSG(appId, key) =>
-        // send msg to all the stored device tOKens of the appId
+          // send msg to all the stored device tOKens of the appId
+          val content = RedisPool.hget(PAYLOADS + appId, key)
+          if (content != null) {
+            val data = JSON.parseObject(content)
 
+          }
         case CMD_SET_APP(appId, data) =>
           // set appid base data
           RedisPool.hset(APN_APPS_MAP, appId, data)
@@ -112,12 +117,12 @@ class Server(address: String) extends Actor with ActorLogging {
           //          })
           if (data != null) {
             val content = JSON.toJSONString(data.asJava, SerializerFeature.PrettyFormat)
-            println(content)
             repSocket ! ZMQMessage(Seq(Frame(content)))
           }
-        case CMD_SET_PAYLOAD(key, value) =>
+        case CMD_SET_PAYLOAD(appId, value) =>
           // set appid payload data
-          RedisPool.set(key, value)
+          val key = MD5.hash(value)
+          RedisPool.hset(PAYLOADS + appId, key, value)
           repSocket ! ZMQMessage(Seq(Frame("OK")))
         //        case CMD_GET_ALL_PAYLOADS =>
         //          val data = RedisPool.hvals(APN_APPS_MAP)
@@ -126,6 +131,13 @@ class Server(address: String) extends Actor with ActorLogging {
         //            seq ++= Seq(Frame(s))
         //          })
         //          repSocket ! ZMQMessage(seq)
+        case CMD_GET_PAYLOADS(appId) =>
+          // get all payloads
+          val data = RedisPool.hgetall(PAYLOADS + appId)
+          if(data != null) {
+            val content = JSON.toJSONString(data asJava, SerializerFeature.PrettyFormat)
+            repSocket ! ZMQMessage(Seq(Frame(content)))
+          }
         case _ => sender ! ZMQMessage(Seq(Frame("error")))
       }
     case x => log.warning("Received unknown message: {}", x)

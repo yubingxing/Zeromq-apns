@@ -13,9 +13,10 @@ import com.notnoop.apns.ApnsService
  * @author IceStar
  */
 object Apn {
-  private var map = HashMap[String, Apn]()
+  private val APN_MAP = HashMap[String, Apn]()
 
   def apply(gameId: String, cert: String, pass: String) = {
+    var map = APN_MAP
     var apn: Apn = null
     if (map.contains(gameId) && map(gameId).isInstanceOf[ApnsService]) {
       println("Get apnservice from cache.")

@@ -32,8 +32,8 @@ object MyScheduler {
 class MyScheduler private (system: ActorSystem, gameId: String, key: String) extends AnyRef {
   private val _key = gameId + key
   val json: String = RedisPool.hget(gameId, key).asInstanceOf[String]
-  var content: JSONObject = _
   var sdl: Cancellable = ScheduleMap.get(_key) get;
+  var content: JSONObject = _
 
   if (json != "" || json != null) {
     content = JSON.parseObject(json)
@@ -43,12 +43,14 @@ class MyScheduler private (system: ActorSystem, gameId: String, key: String) ext
     if (content != null) {
       stop()
       val start = content.getIntValue("start").milliseconds
-      if (content.getBoolean("loop"))
-        ScheduleMap += (_key ->
-          system.scheduler.schedule(start, content.getIntValue("duration") milliseconds, Server.actor, ZMQMessage(Seq(Frame("send" + gameId + "::" + key)))))
-      else
-        ScheduleMap += (_key ->
-          system.scheduler.scheduleOnce(start, Server.actor, ZMQMessage(Seq(Frame("send" + gameId + "::" + key)))))
+      if (content.getBoolean("loop")) {
+        sdl = system.scheduler.schedule(start, content.getIntValue("duration") milliseconds, Server.actor, ZMQMessage(Seq(Frame("send" + gameId + "::" + key))))
+        ScheduleMap += (_key -> sdl)
+      } else {
+        sdl = system.scheduler.scheduleOnce(start, Server.actor, ZMQMessage(Seq(Frame("send" + gameId + "::" + key))))
+        ScheduleMap += (_key -> sdl)
+      }
+
       content.put("activate", true)
       RedisPool.hset(gameId, key, content toJSONString)
     }

@@ -1,5 +1,3 @@
-import scala.collection.immutable.Vector
-
 import org.mashupbots.socko.infrastructure.Logger
 import org.scalatest.matchers.ShouldMatchers
 import org.scalatest.BeforeAndAfter
@@ -93,16 +91,22 @@ class ApnsServiceSpec(_system: ActorSystem) extends TestKit(_system) with Should
     send("tettesttestestseljljskl")
     expectMsg(ZMQMessage(Seq(Frame("error"))))
     send("getapps")
-    expectMsg(ZMQMessage(Vector(Frame("""{"com.ice.test":"{"name":"TestDemo", "cert":"pushdemo_aps.p12", "passwd":"huale@hefei.", "priority":0}","com.ice.test2":"{"name":"TestDemo2", "cert":"pushdemo_aps.p12", "passwd":"huale@hefei.", "priority":0}"}"""))))
+    //    val data = RedisPool.hgetall("APN_APPS_MAP")
+    //    val content = JSON.toJSONString(data.asJava, SerializerFeature.PrettyFormat)
+    //    println(content)
+    //    expectMsg(ZMQMessage(Seq(Frame(content))))
   }
 
   it("should response ok to receive token") {
     TestActorRef(new Server(address))
     reconnect()
+    expectMsg(Connecting)
     send("token com.ice.test::7f3addce7e9d7780eae3bc099d08c68144f93f11b4f6a645fdf5eaa65ab28617")
-    expectMsg(ZMQMessage(Seq(Frame("OK"))))
+    expectNoMsg()
     send("token com.ice.test::44c551bb46d9e0e6de47feb1c2e3b0acaf1ac797ba6d39bc2d28f228f691042b")
-    expectMsg(ZMQMessage(Seq(Frame("OK"))))
+    expectNoMsg()
+    send("tokens com.ice.test")
+    //    expectMsg(ZMQMessage(Seq(Frame("Ok"))))
   }
 
   //  it("should correctly HTTP GET a small file") {
