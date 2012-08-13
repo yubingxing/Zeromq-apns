@@ -81,7 +81,7 @@ object RedisPool {
   }
 
   def hdel(key: Any, field: Any, fields: Any*) = {
-    clients.withClient(client => client.hdel(key, field, fields)) getOrElse null
+    clients.withClient(client => client.hdel(key, field, fields)) getOrElse false
   }
 
   def hlen(key: Any) = {

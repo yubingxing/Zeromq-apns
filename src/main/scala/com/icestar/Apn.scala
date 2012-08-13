@@ -15,21 +15,21 @@ import com.notnoop.apns.ApnsService
 object Apn {
   private val APN_MAP = HashMap[String, Apn]()
 
-  def apply(gameId: String, cert: String, pass: String) = {
+  def apply(appId: String, cert: String, pass: String) = {
     var map = APN_MAP
     var apn: Apn = null
-    if (map.contains(gameId) && map(gameId).isInstanceOf[ApnsService]) {
+    if (map.contains(appId) && map(appId).isInstanceOf[ApnsService]) {
       println("Get apnservice from cache.")
-      apn = map(gameId).asInstanceOf[Apn]
+      apn = map(appId).asInstanceOf[Apn]
     } else {
-      apn = new Apn(gameId, cert, pass)
-      map += (gameId -> apn)
+      apn = new Apn(appId, cert, pass)
+      map += (appId -> apn)
     }
     apn
   }
 
 }
-class Apn private (val gameId: String, val cert: String, val pass: String) {
+class Apn private (val appId: String, val cert: String, val pass: String) {
   private val logger = LoggerFactory.getLogger(getClass)
   private val service = APNS.newService().withCert(cert, pass).withReconnectPolicy(EVERY_HALF_HOUR).withProductionDestination().withSandboxDestination().build()
   //  val service = APNS.newService().withCert(cert, pass).withSandboxDestination().build()
@@ -46,7 +46,7 @@ class Apn private (val gameId: String, val cert: String, val pass: String) {
     val map = service.getInactiveDevices().keySet().iterator()
     while (map.hasNext()) {
       val token = map.next
-      RedisPool.hdel(gameId, token)
+      RedisPool.hdel(Server.TOKENS + appId, token)
     }
   }
 }
