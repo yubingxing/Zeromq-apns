@@ -86,9 +86,9 @@ class Server(address: String) extends Actor with ActorLogging {
       val msg = m.firstFrameAsString
       println("[Receive]:: " + msg)
       msg match {
-        case CMD_RECEIVE_TOKEN(appId, tOKen) =>
-          // receive from iphone/ipad device tOKen
-          RedisPool.hset(Server.TOKENS + appId, tOKen, true)
+        case CMD_RECEIVE_TOKEN(appId, token) =>
+          // receive from iphone/ipad device token
+          RedisPool.hset(Server.TOKENS + appId, token, true)
         case CMD_GET_TOKENS(appId) =>
           val data = RedisPool.hkeys(Server.TOKENS + appId)
           if (data != null) {
@@ -99,10 +99,10 @@ class Server(address: String) extends Actor with ActorLogging {
             repSocket ! ZMQMessage(Seq(Frame(content)))
           }
         case CMD_GET_TOKENS_COUNT(appId) =>
-          // get appid stored tOKens count
+          // get appid stored tokens count
           repSocket ! ZMQMessage(Seq(Frame(RedisPool.hlen(Server.TOKENS + appId) toString)))
         case CMD_PUSH_MSG(appId, key) =>
-          // send msg to all the stored device tOKens of the appId
+          // send msg to all the stored device tokens of the appId
           val content = RedisPool.hget(Server.PAYLOADS + appId, key)
           if (content != null) {
             val payload = JSON.parseObject(content) getString "payload"
