@@ -21,8 +21,7 @@ import akka.zeromq.Frame
 import akka.zeromq.Listener
 import akka.zeromq.SocketType
 import akka.zeromq.ZMQMessage
-import scalaj.collection.Imports.RichSMap
-import scalaj.collection.Imports.RichSSeq
+import scalaj.collection.Imports._
 
 /**
  * Server boot class
@@ -85,6 +84,12 @@ class Server(address: String) extends Actor with ActorLogging {
     case m: ZMQMessage =>
       val msg = m.firstFrameAsString
       println("[Receive]:: " + msg)
+      var cmd: String = null
+      if (m.frames.length > 1) {
+        val tmp = m.frames(1)
+        cmd = tmp.payload.map(_ toChar).mkString
+        println("[CMD]:: " + cmd)
+      }
       msg match {
         case CMD_RECEIVE_TOKEN(appId, token) =>
           // receive from iphone/ipad device token
@@ -96,11 +101,11 @@ class Server(address: String) extends Actor with ActorLogging {
             val content: String = JSON.toJSONString(list, SerializerFeature.PrettyFormat)
             // val content: String = JSON.toJSONString(list, {SerializerFeature.QuoteFieldNames;SerializerFeature.PrettyFormat})
             println(content)
-            repSocket ! ZMQMessage(Seq(Frame(content)))
+            response(content, cmd)
           }
         case CMD_GET_TOKENS_COUNT(appId) =>
           // get appid stored tokens count
-          repSocket ! ZMQMessage(Seq(Frame(RedisPool.hlen(Server.TOKENS + appId) toString)))
+          response(RedisPool.hlen(Server.TOKENS + appId) toString, cmd)
         case CMD_PUSH_MSG(appId, key) =>
           // send msg to all the stored device tokens of the appId
           val content = RedisPool.hget(Server.PAYLOADS + appId, key)
@@ -118,10 +123,10 @@ class Server(address: String) extends Actor with ActorLogging {
           case CMD_SET_APP(appId, data) =>
             // set appid base data
             RedisPool.hset(Server.APN_APPS_MAP, appId, data)
-            repSocket ! ZMQMessage(Seq(Frame("OK")))
+            response("OK", cmd)
           case CMD_DEL_APP(appId) =>
             RedisPool.hdel(Server.APN_APPS_MAP, appId)
-            repSocket ! ZMQMessage(Seq(Frame("OK")))
+            response("OK", cmd)
           case CMD_GET_APPS =>
             val data = RedisPool.hgetall(Server.APN_APPS_MAP)
             //          val content: JSONObject = new JSONObject
@@ -130,13 +135,13 @@ class Server(address: String) extends Actor with ActorLogging {
             //          })
             if (data != null) {
               val content = JSON.toJSONString(data.asJava, SerializerFeature.PrettyFormat)
-              repSocket ! ZMQMessage(Seq(Frame(content)))
+              response(content, cmd)
             }
           case CMD_SET_PAYLOAD(appId, value) =>
             // set appid payload data
             val key = MD5.hash(value)
             RedisPool.hset(Server.PAYLOADS + appId, key, value)
-            repSocket ! ZMQMessage(Seq(Frame("OK")))
+            response("OK", cmd)
           //        case CMD_GET_ALL_PAYLOADS =>
           //          val data = RedisPool.hvals(APN_APPS_MAP)
           //          var seq: Seq[Frame] = Seq()
@@ -146,25 +151,32 @@ class Server(address: String) extends Actor with ActorLogging {
           //          repSocket ! ZMQMessage(seq)
           case CMD_DEL_PAYLOAD(appId, key) =>
             RedisPool.hdel(Server.PAYLOADS + appId, key)
-            repSocket ! ZMQMessage(Seq(Frame("OK")))
+            response("OK", cmd)
           case CMD_GET_PAYLOADS(appId) =>
             // get all payloads
             val data = RedisPool.hgetall(Server.PAYLOADS + appId)
             if (data != null) {
               val content = JSON.toJSONString(data asJava, SerializerFeature.PrettyFormat)
-              repSocket ! ZMQMessage(Seq(Frame(content)))
+              response(content, cmd)
             }
           case CMD_AUTOCLEAN_TOKENS(appId, cert, pass) =>
             val apn = Apn(appId, cert, pass)
             if (apn != null) {
               apn.cleanInactiveDevies()
-              repSocket ! ZMQMessage(Seq(Frame("OK")))
+              response("OK", cmd)
             } else {
-              repSocket ! ZMQMessage(Seq(Frame("Fail")))
+              response("Fail", cmd)
             }
           case x => log.warning("Received unknown message: {}", x)
         }
       }
     case x => log.warning("Received unknown message: {}", x)
+  }
+
+  private[this] def response(data: String, cmd: String) = {
+    if (cmd == null)
+      repSocket ! ZMQMessage(Seq(Frame(data)))
+    else
+      repSocket ! ZMQMessage(Seq(Frame(data)) ++ Seq(Frame(cmd)))
   }
 }
