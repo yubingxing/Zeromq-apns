@@ -34,6 +34,7 @@ object Server {
   val BACKUP = "APN_BACKUP"
   val PAYLOADS = "APN_PAYLOADS_"
   val TOKENS = "APN_TOKENS_"
+  val URLS = "APN_URLS"
   private val logger = LoggerFactory.getLogger(getClass)
   var actor: ActorRef = _
   var debugMode: Boolean = _
@@ -75,6 +76,8 @@ class Server(address: String) extends Actor with ActorLogging {
   private val CMD_GET_TOKENS_COUNT = """tokens_count (.+)""".r
   private val CMD_AUTOCLEAN_TOKENS = """autoclean_tokens (.+)""".r
   private val CMD_PUSH_MSG = """push (.+)::(.+)""".r
+  private val CMD_SET_URLS = """urls (.+)::(.+)""".r
+  private val CMD_GET_URLS = """urls (.+)""".r
 
   override def preStart() = {
     log.debug("ZMQActor Starting")
@@ -149,36 +152,43 @@ class Server(address: String) extends Actor with ActorLogging {
             RedisPool.hset(Server.BACKUP, Server.TOKENS + appId, getTokens(appId))
             RedisPool.del(Server.TOKENS + appId)
             responseOK(cmd)
-          case CMD_SET_PAYLOAD(appId, value) =>
-            // set appid payload data
-            val key = MD5.hash(value)
-            RedisPool.hset(Server.PAYLOADS + appId, key, value)
-            responseOK(cmd)
-          case CMD_DEL_PAYLOAD(appId, key) =>
-            RedisPool.hdel(Server.PAYLOADS + appId, key)
-            responseOK(cmd)
-          case CMD_GET_PAYLOADS(appId) =>
-            // get all payloads
-            responseOK(cmd, getPayloads(appId))
-          case CMD_AUTOCLEAN_TOKENS(appId) =>
-            if (RedisPool.hlen(Server.TOKENS + appId) <= 0) {
+          case x => x match {
+            case CMD_SET_PAYLOAD(appId, value) =>
+              // set appid payload data
+              val key = MD5.hash(value)
+              RedisPool.hset(Server.PAYLOADS + appId, key, value)
               responseOK(cmd)
-            } else {
-              val data = RedisPool.hget(Server.APN_APPS_MAP, appId)
-              if (data != null) {
-                val content = JSON.parseObject(data)
-                val conf = ConfigFactory.load()
-                val apn = Apn(appId, conf.getString("staticContentServer.rootPath") + content.getString("cert"), content.getString("pass"))
-                if (apn != null) {
-                  apn.cleanInactiveDevies()
-                  responseOK(cmd)
-                } else {
-                  responseFail(cmd)
+            case CMD_DEL_PAYLOAD(appId, key) =>
+              RedisPool.hdel(Server.PAYLOADS + appId, key)
+              responseOK(cmd)
+            case CMD_GET_PAYLOADS(appId) =>
+              // get all payloads
+              responseOK(cmd, getPayloads(appId))
+            case CMD_AUTOCLEAN_TOKENS(appId) =>
+              if (RedisPool.hlen(Server.TOKENS + appId) <= 0) {
+                responseOK(cmd)
+              } else {
+                val data = RedisPool.hget(Server.APN_APPS_MAP, appId)
+                if (data != null) {
+                  val content = JSON.parseObject(data)
+                  val conf = ConfigFactory.load()
+                  val apn = Apn(appId, conf.getString("staticContentServer.rootPath") + content.getString("cert"), content.getString("pass"))
+                  if (apn != null) {
+                    apn.cleanInactiveDevies()
+                    responseOK(cmd)
+                  } else {
+                    responseFail(cmd)
+                  }
                 }
               }
+            case x => x match {
+              case CMD_SET_URLS(appId, value) =>
+                RedisPool.hset(Server.URLS, appId, value)
+              case CMD_GET_URLS(appId) =>
+                responseOK(cmd, RedisPool.hget(Server.URLS, appId))
+              case x => log.warning("Received unknown message: {}", x)
             }
-
-          case x => log.warning("Received unknown message: {}", x)
+          }
         }
       }
     //      } catch {
