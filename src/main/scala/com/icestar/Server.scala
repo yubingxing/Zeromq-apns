@@ -21,6 +21,7 @@ import akka.zeromq.Frame
 import akka.zeromq.Listener
 import akka.zeromq.SocketType
 import akka.zeromq.ZMQMessage
+
 import scalaj.collection.Imports._
 
 /**
@@ -35,6 +36,7 @@ object Server {
   val TOKENS = "APN_TOKENS_"
   private val logger = LoggerFactory.getLogger(getClass)
   var actor: ActorRef = _
+  var debugMode: Boolean = _
 
   def apply(system: ActorSystem, address: String) = {
     logger.info("Creating Sockets...")
@@ -52,6 +54,8 @@ object Server {
     RedisPool.init(conf.getString("redis.host"), conf.getInt("redis.port"))
     val address = conf.getString("apnserver.address")
     println("Connecting to " + address)
+    debugMode = conf.getString("apnserver.debugMode").toLowerCase() == "on"
+    println("[debugMode] = " + debugMode)
     val server = Server(system, address)
     val contentServer = StaticContentServer()
     contentServer start;
@@ -69,7 +73,7 @@ class Server(address: String) extends Actor with ActorLogging {
   private val CMD_RECEIVE_TOKEN = """token (.+)::(.+)""".r
   private val CMD_GET_TOKENS = """tokens (.+)""".r
   private val CMD_GET_TOKENS_COUNT = """tokens_count (.+)""".r
-  private val CMD_AUTOCLEAN_TOKENS = """autoclean_tokens (.+)::(.+)::(.+)""".r
+  private val CMD_AUTOCLEAN_TOKENS = """autoclean_tokens (.+)""".r
   private val CMD_PUSH_MSG = """push (.+)::(.+)""".r
 
   override def preStart() = {
@@ -78,6 +82,11 @@ class Server(address: String) extends Actor with ActorLogging {
   override def preRestart(reason: Throwable, message: Option[Any]) {
     log.error(reason, "Restarting due to [{}] when processing [{}]",
       reason.getMessage, message.getOrElse(""))
+  }
+
+  def println(str: Any) {
+    if (Server.debugMode)
+      Console println str
   }
 
   def receive = {
@@ -91,6 +100,7 @@ class Server(address: String) extends Actor with ActorLogging {
         cmd = tmp.payload.map(_ toChar).mkString
         println("[CMD]:: " + cmd)
       }
+      //      try {
       msg match {
         case CMD_RECEIVE_TOKEN(appId, token) =>
           // receive from iphone/ipad device token
@@ -144,30 +154,33 @@ class Server(address: String) extends Actor with ActorLogging {
             val key = MD5.hash(value)
             RedisPool.hset(Server.PAYLOADS + appId, key, value)
             response("OK", cmd)
-          //        case CMD_GET_ALL_PAYLOADS =>
-          //          val data = RedisPool.hvals(APN_APPS_MAP)
-          //          var seq: Seq[Frame] = Seq()
-          //          data.foreach(s => {
-          //            seq ++= Seq(Frame(s))
-          //          })
-          //          repSocket ! ZMQMessage(seq)
           case CMD_DEL_PAYLOAD(appId, key) =>
             RedisPool.hdel(Server.PAYLOADS + appId, key)
             response("OK", cmd)
           case CMD_GET_PAYLOADS(appId) =>
             // get all payloads
             response(getPayloads(appId), cmd)
-          case CMD_AUTOCLEAN_TOKENS(appId, cert, pass) =>
-            val apn = Apn(appId, cert, pass)
-            if (apn != null) {
-              apn.cleanInactiveDevies()
-              response("OK", cmd)
-            } else {
-              response("Fail", cmd)
+          case CMD_AUTOCLEAN_TOKENS(appId) =>
+            val data = RedisPool.hget(Server.APN_APPS_MAP, appId)
+            if (data != null) {
+              val content = JSON.parseObject(data)
+              val conf = ConfigFactory.load()
+              val apn = Apn(appId, conf.getString("staticContentServer.rootPath") + content.getString("cert"), content.getString("pass"))
+              if (apn != null) {
+                apn.cleanInactiveDevies()
+                response("OK", cmd)
+              } else {
+                response("Fail", cmd)
+              }
             }
           case x => log.warning("Received unknown message: {}", x)
         }
       }
+    //      } catch {
+    //        case e:Exception =>
+    //          log.error(e getStackTraceString)
+    //          e printStackTrace
+    //      }
     case x => log.warning("Received unknown message: {}", x)
   }
 
@@ -195,7 +208,7 @@ class Server(address: String) extends Actor with ActorLogging {
     }
     return null
   }
-  
+
   private[this] def response(data: String, cmd: String) = {
     if (cmd == null)
       repSocket ! ZMQMessage(Seq(Frame(data)))
