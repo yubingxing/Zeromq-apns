@@ -94,7 +94,7 @@ class Server(address: String) extends Actor with ActorLogging {
     case m: ZMQMessage =>
       val msg = m.firstFrameAsString
       println("[Receive]:: " + msg)
-      var cmd: String = null
+      var cmd: String = ""
       if (m.frames.length > 1) {
         val tmp = m.frames(1)
         cmd = tmp.payload.map(_ toChar).mkString
@@ -214,11 +214,11 @@ class Server(address: String) extends Actor with ActorLogging {
     return null
   }
 
-  private[this] def responseOK(cmd: String, data: String = null) = {
+  private[this] def responseOK(cmd: String, data: String = "") = {
     repSocket ! ZMQMessage(Seq(Frame("OK"), Frame(cmd), Frame(data)))
   }
 
-  private[this] def responseFail(cmd: String, data: String = null) = {
+  private[this] def responseFail(cmd: String, data: String = "") = {
     repSocket ! ZMQMessage(Seq(Frame("Fail"), Frame(cmd), Frame(data)))
   }
 }
