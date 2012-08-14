@@ -21,8 +21,8 @@ import akka.zeromq.Frame
 import akka.zeromq.Listener
 import akka.zeromq.SocketType
 import akka.zeromq.ZMQMessage
-
-import scalaj.collection.Imports._
+import scalaj.collection.Imports.RichSMap
+import scalaj.collection.Imports.RichSSeq
 
 /**
  * Server boot class
@@ -201,35 +201,39 @@ class Server(address: String) extends Actor with ActorLogging {
   }
 
   /**
-   * get app's all payloads
+   * get app all payloads of the app
    * @param appId
    */
   private[this] def getPayloads(appId: String): String = {
     val data = RedisPool.hgetall(Server.PAYLOADS + appId)
-    if (data != null) {
+    if (data != null && data != "") {
       return JSON.toJSONString(data asJava, SerializerFeature.PrettyFormat)
     }
     return null
   }
 
   /**
-   * get app's all tokens
+   * get all tokens of the app
    * @param appId
    * @return
    */
   private[this] def getTokens(appId: String): String = {
     val data = RedisPool.hkeys(Server.TOKENS + appId)
-    if (data != null) {
+    if (data != null && data != "") {
       return JSON.toJSONString(data asJava, SerializerFeature.PrettyFormat)
     }
     return null
   }
 
   private[this] def responseOK(cmd: String, data: String = "") = {
-    repSocket ! ZMQMessage(Seq(Frame("OK"), Frame(cmd), Frame(data)))
+    repSocket ! ZMQMessage(Seq(Frame("OK"), Frame(getOrElse(cmd)), Frame(getOrElse(data))))
   }
 
   private[this] def responseFail(cmd: String, data: String = "") = {
-    repSocket ! ZMQMessage(Seq(Frame("Fail"), Frame(cmd), Frame(data)))
+    repSocket ! ZMQMessage(Seq(Frame("Fail"), Frame(getOrElse(cmd)), Frame(getOrElse(data))))
+  }
+
+  private[this] def getOrElse(str: String, el: String = "") = {
+    if (str == null) el else str
   }
 }
