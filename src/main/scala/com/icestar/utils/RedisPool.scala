@@ -40,6 +40,10 @@ object RedisPool {
     clients.withClient(client => client.llen(key)) getOrElse 0
   }
 
+  def del(key: Any, keys: Any*) = {
+    clients.withClient(client => client.del(key, keys)) getOrElse 0
+  }
+
   def set(key: Any, value: Any) = {
     clients.withClient(client => client.set(key, value))
   }

@@ -30,8 +30,9 @@ import scalaj.collection.Imports._
 object Server {
   //***************************CONSTANTS****************************//
   val APN_APPS_MAP = "APN_APPS_MAP"
-  val PAYLOADS = "PAYLOADS_"
-  val TOKENS = "TOKENS_"
+  val BACKUP = "APN_BACKUP"
+  val PAYLOADS = "APN_PAYLOADS_"
+  val TOKENS = "APN_TOKENS_"
   private val logger = LoggerFactory.getLogger(getClass)
   var actor: ActorRef = _
 
@@ -95,14 +96,7 @@ class Server(address: String) extends Actor with ActorLogging {
           // receive from iphone/ipad device token
           RedisPool.hset(Server.TOKENS + appId, token, true)
         case CMD_GET_TOKENS(appId) =>
-          val data = RedisPool.hkeys(Server.TOKENS + appId)
-          if (data != null) {
-            val list = data asJava
-            val content: String = JSON.toJSONString(list, SerializerFeature.PrettyFormat)
-            // val content: String = JSON.toJSONString(list, {SerializerFeature.QuoteFieldNames;SerializerFeature.PrettyFormat})
-            println(content)
-            response(content, cmd)
-          }
+          response(getTokens(appId), cmd)
         case CMD_GET_TOKENS_COUNT(appId) =>
           // get appid stored tokens count
           response(RedisPool.hlen(Server.TOKENS + appId) toString, cmd)
@@ -124,9 +118,6 @@ class Server(address: String) extends Actor with ActorLogging {
             // set appid base data
             RedisPool.hset(Server.APN_APPS_MAP, appId, data)
             response("OK", cmd)
-          case CMD_DEL_APP(appId) =>
-            RedisPool.hdel(Server.APN_APPS_MAP, appId)
-            response("OK", cmd)
           case CMD_GET_APPS =>
             val data = RedisPool.hgetall(Server.APN_APPS_MAP)
             //          val content: JSONObject = new JSONObject
@@ -137,6 +128,17 @@ class Server(address: String) extends Actor with ActorLogging {
               val content = JSON.toJSONString(data.asJava, SerializerFeature.PrettyFormat)
               response(content, cmd)
             }
+          case CMD_DEL_APP(appId) =>
+            // backup app details
+            RedisPool.hset(Server.BACKUP, appId, RedisPool.hget(Server.APN_APPS_MAP, appId))
+            RedisPool.hdel(Server.APN_APPS_MAP, appId)
+            // backup app payloads
+            RedisPool.hset(Server.BACKUP, Server.PAYLOADS + appId, getPayloads(appId))
+            RedisPool.del(Server.PAYLOADS + appId)
+            // backup app tokens
+            RedisPool.hset(Server.BACKUP, Server.TOKENS + appId, getTokens(appId))
+            RedisPool.del(Server.TOKENS + appId)
+            response("OK", cmd)
           case CMD_SET_PAYLOAD(appId, value) =>
             // set appid payload data
             val key = MD5.hash(value)
@@ -154,11 +156,7 @@ class Server(address: String) extends Actor with ActorLogging {
             response("OK", cmd)
           case CMD_GET_PAYLOADS(appId) =>
             // get all payloads
-            val data = RedisPool.hgetall(Server.PAYLOADS + appId)
-            if (data != null) {
-              val content = JSON.toJSONString(data asJava, SerializerFeature.PrettyFormat)
-              response(content, cmd)
-            }
+            response(getPayloads(appId), cmd)
           case CMD_AUTOCLEAN_TOKENS(appId, cert, pass) =>
             val apn = Apn(appId, cert, pass)
             if (apn != null) {
@@ -173,10 +171,35 @@ class Server(address: String) extends Actor with ActorLogging {
     case x => log.warning("Received unknown message: {}", x)
   }
 
+  /**
+   * get app's all payloads
+   * @param appId
+   */
+  private[this] def getPayloads(appId: String): String = {
+    val data = RedisPool.hgetall(Server.PAYLOADS + appId)
+    if (data != null) {
+      return JSON.toJSONString(data asJava, SerializerFeature.PrettyFormat)
+    }
+    return null
+  }
+
+  /**
+   * get app's all tokens
+   * @param appId
+   * @return
+   */
+  private[this] def getTokens(appId: String): String = {
+    val data = RedisPool.hkeys(Server.TOKENS + appId)
+    if (data != null) {
+      return JSON.toJSONString(data asJava, SerializerFeature.PrettyFormat)
+    }
+    return null
+  }
+  
   private[this] def response(data: String, cmd: String) = {
     if (cmd == null)
       repSocket ! ZMQMessage(Seq(Frame(data)))
     else
-      repSocket ! ZMQMessage(Seq(Frame(data)) ++ Seq(Frame(cmd)))
+      repSocket ! ZMQMessage(Seq(Frame(data), Frame(cmd)))
   }
 }
