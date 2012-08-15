@@ -1,6 +1,5 @@
 package com.icestar
 import java.io.File
-
 import org.apache.commons.io.FileUtils
 import org.mashupbots.socko.events.HttpRequestEvent
 import org.mashupbots.socko.handlers.StaticContentHandler
@@ -12,14 +11,15 @@ import org.mashupbots.socko.routes.PathSegments
 import org.mashupbots.socko.routes.Routes
 import org.mashupbots.socko.webserver.WebServer
 import org.mashupbots.socko.webserver.WebServerConfig
-
 import com.typesafe.config.ConfigFactory
-
 import akka.actor.actorRef2Scala
 import akka.actor.ActorRef
 import akka.actor.ActorSystem
 import akka.actor.Props
 import akka.routing.FromConfig
+import akka.actor.Actor
+import org.mashupbots.socko.events.HttpRequestEvent
+import java.util.Date
 
 object StaticContentServer {
   private val actorSystem = ActorSystem("staticContentServer")
@@ -41,6 +41,9 @@ class StaticContentServer private (system: ActorSystem) extends AnyRef {
         event.asInstanceOf[HttpRequestEvent],
         relativePath.mkString("", "/", ""))
       router ! request
+    }
+    case GET(request) => {
+      system.actorOf(Props[HttpHandler]) ! request
     }
   })
   private var rootDir: File = null
@@ -84,5 +87,17 @@ class StaticContentServer private (system: ActorSystem) extends AnyRef {
       tempDir = null
     }
     system.shutdown()
+  }
+}
+/**
+ * Handle http request and writes the response then stop
+ * @author IceStar
+ */
+private class HttpHandler extends Actor {
+  def receive = {
+    case event:HttpRequestEvent =>
+      println(event.request.content)
+      event.response.write("Hello from Socko (" + new Date().toString() + ")")
+      context.stop(self)
   }
 }
