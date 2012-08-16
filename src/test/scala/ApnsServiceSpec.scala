@@ -23,7 +23,7 @@ class ApnsServiceSpec(_system: ActorSystem) extends TestKit(_system) with Should
 
   val address = "tcp://0.0.0.0:5566"
   val client_address = "tcp://127.0.0.1:5566"
-  val cert_path = "upload/cert/"
+  val cert_path = "upload/"
   var client: ActorRef = _
 
   after {

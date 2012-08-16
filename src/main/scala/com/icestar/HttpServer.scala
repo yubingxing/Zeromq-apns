@@ -22,6 +22,7 @@ import org.mashupbots.socko.routes.Routes
 import org.mashupbots.socko.webserver.WebServer
 import org.mashupbots.socko.webserver.WebServerConfig
 
+import com.icestar.utils.CommonUtils
 import com.typesafe.config.ConfigFactory
 
 import akka.actor.actorRef2Scala
@@ -75,7 +76,6 @@ class HttpServer private (val system: ActorSystem) extends AnyRef {
   private val routes = Routes({
     case HttpRequest(request) => request match {
       case POST(Path("/upload")) =>
-        println(request.endPoint.host)
         // Save file to the upload directory so it can be downloaded
         fileUploadHandlerRouter ! FileUploadRequest(request, uploadDir)
       case GET(Path("/")) =>
@@ -191,7 +191,6 @@ private class FileUploadHandler extends Actor {
   def receive = {
     case msg: FileUploadRequest => {
       val ctx = msg.event
-      println("[FileUploadRequest] :: " + ctx.request.toString)
       try {
         val contentType = ctx.request.contentType
         if (contentType != "" &&
@@ -201,8 +200,13 @@ private class FileUploadHandler extends Actor {
 
           val descriptionField = decoder.getBodyHttpData("fileDescription").asInstanceOf[Attribute]
 
+          println("============================================")
           val uploadField = decoder.getBodyHttpData("fileUpload").asInstanceOf[FileUpload]
+          println(uploadField)
           val destFile = new File(msg.saveDir, uploadField.getFilename)
+          println("============================================")
+          println(msg.saveDir + "//" + uploadField.getFilename())
+          println("============================================")
           uploadField.renameTo(destFile)
 
           ctx.response.write("File upload complete!")
@@ -236,12 +240,11 @@ private class HttpHandler extends Actor {
     case event: HttpRequestEvent =>
       val response = event.response
       event match {
-        case GET(Path("/get")) =>
-          response.write("Hello from Socko (" + new Date().toString() + ")")
-          context.stop(self)
         case GET(PathSegments("urls" :: appId :: Nil)) =>
-          response.write(RedisPool.hget(Server.URLS, appId))
-          context.stop(self)
+          response.write(CommonUtils.getOrElse(RedisPool.hget(Server.URLS, appId)))
+        case _ =>
+          response.write("Hello from Socko (" + new Date().toString() + ")")
       }
+      context.stop(self)
   }
 }

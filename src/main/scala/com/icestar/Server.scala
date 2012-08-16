@@ -5,6 +5,7 @@ import org.slf4j.LoggerFactory
 import com.alibaba.fastjson.serializer.SerializerFeature
 import com.alibaba.fastjson.JSON
 import com.icestar.utils.crypto.MD5
+import com.icestar.utils.CommonUtils
 import com.icestar.utils.RedisPool
 import com.typesafe.config.ConfigFactory
 
@@ -225,14 +226,10 @@ class Server(val address: String) extends Actor with ActorLogging {
   }
 
   private[this] def responseOK(cmd: String, data: String = "") = {
-    repSocket ! ZMQMessage(Seq(Frame("OK"), Frame(getOrElse(cmd)), Frame(getOrElse(data))))
+    repSocket ! ZMQMessage(Seq(Frame("OK"), Frame(CommonUtils.getOrElse(cmd)), Frame(CommonUtils.getOrElse(data))))
   }
 
   private[this] def responseFail(cmd: String, data: String = "") = {
-    repSocket ! ZMQMessage(Seq(Frame("Fail"), Frame(getOrElse(cmd)), Frame(getOrElse(data))))
-  }
-
-  private[this] def getOrElse(str: String, el: String = "") = {
-    if (str == null) el else str
+    repSocket ! ZMQMessage(Seq(Frame("Fail"), Frame(CommonUtils.getOrElse(cmd)), Frame(CommonUtils.getOrElse(data))))
   }
 }
