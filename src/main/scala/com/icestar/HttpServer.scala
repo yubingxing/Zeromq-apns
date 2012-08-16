@@ -2,7 +2,6 @@ package com.icestar
 import java.io.File
 import java.io.FileOutputStream
 import java.util.Date
-
 import org.apache.commons.io.FileUtils
 import org.jboss.netty.handler.codec.http.multipart.Attribute
 import org.jboss.netty.handler.codec.http.multipart.DefaultHttpDataFactory
@@ -21,10 +20,8 @@ import org.mashupbots.socko.routes.PathSegments
 import org.mashupbots.socko.routes.Routes
 import org.mashupbots.socko.webserver.WebServer
 import org.mashupbots.socko.webserver.WebServerConfig
-
 import com.icestar.utils.CommonUtils
 import com.typesafe.config.ConfigFactory
-
 import akka.actor.actorRef2Scala
 import akka.actor.Actor
 import akka.actor.ActorSystem
@@ -32,8 +29,10 @@ import akka.actor.Props
 import akka.event.Logging
 import akka.routing.FromConfig
 import utils.RedisPool
+import org.mashupbots.socko.handlers.StaticFileRequest
+import org.mashupbots.socko.infrastructure.Logger
 
-object HttpServer {
+object HttpServer extends Logger {
   private val actorConfig = """
     my-pinned-dispatcher {
 	  type=PinnedDispatcher
@@ -68,6 +67,7 @@ class HttpServer private (val system: ActorSystem) extends AnyRef {
 
   private val fileUploadHandlerRouter = system.actorOf(Props[FileUploadHandler]
     .withRouter(FromConfig()).withDispatcher("my-pinned-dispatcher"), "file-upload-router")
+
   private val conf = ConfigFactory.load
 
   /**
@@ -81,10 +81,9 @@ class HttpServer private (val system: ActorSystem) extends AnyRef {
       case GET(Path("/")) =>
         println(request.endPoint.host)
         request.response.redirect("http://" + request.endPoint.host + "/index.html")
-      //      case GET(PathSegments(fileName :: Nil)) =>
-      //        println("Download requested file " + fileName)
-      //        // Download requested file
-      //        staticFileHandlerRouter ! new StaticFileRequest(request, new File(uploadDir, fileName))
+      case GET(PathSegments(fileName :: Nil)) =>
+        // Download requested file
+        staticFileHandlerRouter ! new StaticFileRequest(request, new File(uploadDir, fileName))
       case GET(_) =>
         // Send request to HttpHandler
         system.actorOf(Props[HttpHandler]) ! request
