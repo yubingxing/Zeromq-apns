@@ -12,7 +12,6 @@ import org.mashupbots.socko.events.HttpRequestEvent
 import org.mashupbots.socko.events.HttpResponseStatus
 import org.mashupbots.socko.handlers.StaticContentHandler
 import org.mashupbots.socko.handlers.StaticContentHandlerConfig
-import org.mashupbots.socko.handlers.StaticFileRequest
 import org.mashupbots.socko.infrastructure.CharsetUtil
 import org.mashupbots.socko.routes.GET
 import org.mashupbots.socko.routes.HttpRequest
@@ -31,6 +30,7 @@ import akka.actor.ActorSystem
 import akka.actor.Props
 import akka.event.Logging
 import akka.routing.FromConfig
+import utils.RedisPool
 
 object HttpServer {
   private val actorConfig = """
@@ -74,17 +74,20 @@ class HttpServer private (val system: ActorSystem) extends AnyRef {
    */
   private val routes = Routes({
     case HttpRequest(request) => request match {
-      case GET(Path("/")) =>
-        request.response.redirect("http://" + request.endPoint.host + "/index.html")
-      case GET(PathSegments(fileName :: Nil)) =>
-        // Download requested file
-        staticFileHandlerRouter ! new StaticFileRequest(request, new File(uploadDir, fileName))
-      case GET(Path("/get")) =>
-        // Get data from service
-        system.actorOf(Props[HttpHandler]) ! request
       case POST(Path("/upload")) =>
+        println(request.endPoint.host)
         // Save file to the upload directory so it can be downloaded
         fileUploadHandlerRouter ! FileUploadRequest(request, uploadDir)
+      case GET(Path("/")) =>
+        println(request.endPoint.host)
+        request.response.redirect("http://" + request.endPoint.host + "/index.html")
+      //      case GET(PathSegments(fileName :: Nil)) =>
+      //        println("Download requested file " + fileName)
+      //        // Download requested file
+      //        staticFileHandlerRouter ! new StaticFileRequest(request, new File(uploadDir, fileName))
+      case GET(_) =>
+        // Send request to HttpHandler
+        system.actorOf(Props[HttpHandler]) ! request
     }
   })
 
@@ -94,6 +97,7 @@ class HttpServer private (val system: ActorSystem) extends AnyRef {
   private var tempDir: File = new File(conf.getString("HttpServer.tmpPath"))
   tempDir mkdir
 
+  //  println("[rootFilePaths] = " + uploadDir.getAbsolutePath)
   StaticContentHandlerConfig.rootFilePaths = Seq(uploadDir.getAbsolutePath);
   StaticContentHandlerConfig.tempDir = tempDir;
   StaticContentHandlerConfig.browserCacheTimeoutSeconds = 60
@@ -101,7 +105,6 @@ class HttpServer private (val system: ActorSystem) extends AnyRef {
   private val webServer: WebServer = new WebServer(new WebServerConfig(conf, "HttpServer"),
     routes, system)
 
-  val path: String = "http://" + webServer.config.hostname + ":" + webServer.config.port + "/"
   def start() {
     // Create content
     createContent(uploadDir)
@@ -113,7 +116,7 @@ class HttpServer private (val system: ActorSystem) extends AnyRef {
         webServer stop
       }
     })
-    println("WebServer starting..., " + path)
+    println("WebServer starting..., http://" + webServer.config.hostname + ":" + webServer.config.port + "/")
   }
 
   def stop() {
@@ -188,6 +191,7 @@ private class FileUploadHandler extends Actor {
   def receive = {
     case msg: FileUploadRequest => {
       val ctx = msg.event
+      println("[FileUploadRequest] :: " + ctx.request.toString)
       try {
         val contentType = ctx.request.contentType
         if (contentType != "" &&
@@ -230,8 +234,14 @@ private object HttpDataFactory {
 private class HttpHandler extends Actor {
   def receive = {
     case event: HttpRequestEvent =>
-      println(event.request.content)
-      event.response.write("Hello from Socko (" + new Date().toString() + ")")
-      context.stop(self)
+      val response = event.response
+      event match {
+        case GET(Path("/get")) =>
+          response.write("Hello from Socko (" + new Date().toString() + ")")
+          context.stop(self)
+        case GET(PathSegments("urls" :: appId :: Nil)) =>
+          response.write(RedisPool.hget(Server.URLS, appId))
+          context.stop(self)
+      }
   }
 }

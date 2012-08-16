@@ -2,24 +2,21 @@ import org.mashupbots.socko.infrastructure.Logger
 import org.scalatest.matchers.ShouldMatchers
 import org.scalatest.BeforeAndAfter
 import org.scalatest.FunSpec
-
 import com.icestar.utils.RedisPool
-import com.icestar.Server
+import com.icestar.Apn
 import com.typesafe.config.ConfigFactory
-
 import akka.actor.actorRef2Scala
 import akka.actor.ActorRef
 import akka.actor.ActorSystem
 import akka.testkit.ImplicitSender
-import akka.testkit.TestActorRef
 import akka.testkit.TestKit
 import akka.zeromq.zeromqSystem
 import akka.zeromq.Connect
-import akka.zeromq.Connecting
 import akka.zeromq.Frame
 import akka.zeromq.Listener
 import akka.zeromq.SocketType
 import akka.zeromq.ZMQMessage
+import com.notnoop.apns.APNS
 
 class ApnsServiceSpec(_system: ActorSystem) extends TestKit(_system) with ShouldMatchers with ImplicitSender with FunSpec with BeforeAndAfter with TestHttpClient with Logger {
   def this() = this(ActorSystem("ApnsServiceSpec"))
@@ -62,26 +59,25 @@ class ApnsServiceSpec(_system: ActorSystem) extends TestKit(_system) with Should
     assert(conf.getString("redis.host") === "127.0.0.1")
     assert(conf.getInt("redis.port") === 6379)
   }
-  /*
   it("should send push notifications success") {
     val apn = Apn("com.huale.PushNotificatinsDemo", cert_path + "pushdemo_aps.p12", "huale@hefei.")
     var token = "44c551bb46d9e0e6de47feb1c2e3b0acaf1ac797ba6d39bc2d28f228f691042b"
-    val payload = """{
-	    "aps" : {
-	        "alert" : "This is a test notifications.",
-	        "badge" : 9,
-	        "sound" : "bingbong.aiff"
-		    },
-		    "acme1" : "bar",
-		    "acme2" : 42
-		}"""
-    //    val payload = APNS.newPayload().alertBody("This is a test notifications.").build()
+    //    val payload = """{
+    //	    "aps" : {
+    //	        "alert" : "This is a test notifications.",
+    //	        "badge" : 9,
+    //	        "sound" : "bingbong.aiff"
+    //		    },
+    //		    "acme1" : "bar",
+    //		    "acme2" : 42
+    //		}"""
+    val payload = APNS.newPayload().alertBody("This is a test notifications.").build()
     apn.send(token, payload)
 
     //    token = "7f3addce7e9d7780eae3bc099d08c68144f93f11b4f6a645fdf5eaa65ab28617"
     //    apn.send(token, payload)
   }
-*/
+  /*
   it("should response ok to set app") {
     TestActorRef(new Server(address))
     reconnect()
@@ -110,6 +106,7 @@ class ApnsServiceSpec(_system: ActorSystem) extends TestKit(_system) with Should
     send("tokens com.ice.test")
     //    expectMsg(ZMQMessage(Seq(Frame("Ok"))))
   }
+   */
 
   //  it("should correctly HTTP GET a small file") {
   //    val contentServer = HttpServer()
