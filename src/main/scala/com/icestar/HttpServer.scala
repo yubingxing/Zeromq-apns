@@ -2,6 +2,7 @@ package com.icestar
 import java.io.File
 import java.io.FileOutputStream
 import java.util.Date
+
 import org.apache.commons.io.FileUtils
 import org.jboss.netty.handler.codec.http.multipart.Attribute
 import org.jboss.netty.handler.codec.http.multipart.DefaultHttpDataFactory
@@ -11,7 +12,9 @@ import org.mashupbots.socko.events.HttpRequestEvent
 import org.mashupbots.socko.events.HttpResponseStatus
 import org.mashupbots.socko.handlers.StaticContentHandler
 import org.mashupbots.socko.handlers.StaticContentHandlerConfig
+import org.mashupbots.socko.handlers.StaticFileRequest
 import org.mashupbots.socko.infrastructure.CharsetUtil
+import org.mashupbots.socko.infrastructure.Logger
 import org.mashupbots.socko.routes.GET
 import org.mashupbots.socko.routes.HttpRequest
 import org.mashupbots.socko.routes.POST
@@ -20,8 +23,10 @@ import org.mashupbots.socko.routes.PathSegments
 import org.mashupbots.socko.routes.Routes
 import org.mashupbots.socko.webserver.WebServer
 import org.mashupbots.socko.webserver.WebServerConfig
+
 import com.icestar.utils.CommonUtils
 import com.typesafe.config.ConfigFactory
+
 import akka.actor.actorRef2Scala
 import akka.actor.Actor
 import akka.actor.ActorSystem
@@ -29,8 +34,6 @@ import akka.actor.Props
 import akka.event.Logging
 import akka.routing.FromConfig
 import utils.RedisPool
-import org.mashupbots.socko.handlers.StaticFileRequest
-import org.mashupbots.socko.infrastructure.Logger
 
 object HttpServer extends Logger {
   private val actorConfig = """
@@ -45,11 +48,11 @@ object HttpServer extends Logger {
 	    deployment {
 		  /static-file-router {
 		  	router = round-robin
-		  	nr-of-instances = 5
+		  	nr-of-instances = 20
 		  }
 		  /file-upload-router {
 		  	router = round-robin
-		  	nr-of-instances = 5
+		  	nr-of-instances = 10
 		  }
 		}
 	  }
@@ -70,6 +73,12 @@ class HttpServer private (val system: ActorSystem) extends AnyRef {
 
   private val conf = ConfigFactory.load
 
+  // Create root and temp dir
+  private val uploadDir: File = new File(conf.getString("HttpServer.uploadPath"))
+  uploadDir mkdir
+  private var tempDir: File = new File(conf.getString("HttpServer.tmpPath"))
+  tempDir mkdir
+
   /**
    * define routes
    */
@@ -79,22 +88,16 @@ class HttpServer private (val system: ActorSystem) extends AnyRef {
         // Save file to the upload directory so it can be downloaded
         fileUploadHandlerRouter ! FileUploadRequest(request, uploadDir)
       case GET(Path("/")) =>
-        println(request.endPoint.host)
         request.response.redirect("http://" + request.endPoint.host + "/index.html")
       case GET(PathSegments(fileName :: Nil)) =>
         // Download requested file
+        println(uploadDir.getAbsolutePath() + fileName)
         staticFileHandlerRouter ! new StaticFileRequest(request, new File(uploadDir, fileName))
       case GET(_) =>
         // Send request to HttpHandler
         system.actorOf(Props[HttpHandler]) ! request
     }
   })
-
-  // Create root and temp dir
-  private val uploadDir: File = new File(conf.getString("HttpServer.uploadPath"))
-  uploadDir mkdir
-  private var tempDir: File = new File(conf.getString("HttpServer.tmpPath"))
-  tempDir mkdir
 
   //  println("[rootFilePaths] = " + uploadDir.getAbsolutePath)
   StaticContentHandlerConfig.rootFilePaths = Seq(uploadDir.getAbsolutePath);

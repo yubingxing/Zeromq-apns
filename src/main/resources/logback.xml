@@ -2,7 +2,7 @@
 <configuration>
 
 	<appender name="FILE" class="ch.qos.logback.core.FileAppender">
-		<file>/tmp/notifier.log</file>
+		<file>log/notifier.log</file>
 
 		<layout class="ch.qos.logback.classic.PatternLayout">
 			<Pattern>%date %level [%thread] %logger{10} [%file:%line] %msg%n
@@ -17,20 +17,29 @@
 		</encoder>
 	</appender>
 
-	<appender name="WEBLOG" class="ch.qos.logback.core.ConsoleAppender">
+	<appender name="WEBLOG"
+		class="ch.qos.logback.core.rolling.RollingFileAppender">
+		<file>log/apnWebLogFile.log</file>
+		<rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
+			<!-- daily rollover -->
+			<fileNamePattern>apnWebLogFile.%d{yyyy-MM-dd}.log</fileNamePattern>
+
+			<!-- keey 30 days' worth of history -->
+			<maxHistory>30</maxHistory>
+		</rollingPolicy>
 		<encoder>
-			<pattern>WEBLOG: %msg%n</pattern>
+			<pattern>%msg%n</pattern>
 		</encoder>
 	</appender>
 
-	<logger name="org.mashupbots.socko.utils.WebLogWriter" level="info"
-		additivity="false">
+	<logger name="org.mashupbots.socko.infrastructure.WebLogWriter"
+		level="info" additivity="false">
 		<appender-ref ref="WEBLOG" />
 	</logger>
 
 	<root level="info">
 		<appender-ref ref="STDOUT" />
-		<!-- <appender-ref ref="STDOUT" /> -->
+		<!-- <appender-ref ref="FILE" /> -->
 	</root>
 
 </configuration>
