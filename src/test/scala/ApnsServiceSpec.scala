@@ -112,14 +112,14 @@ class ApnsServiceSpec(_system: ActorSystem) extends TestKit(_system) with Should
   }
 
   //  it("should correctly HTTP GET a small file") {
-  //    val contentServer = StaticContentServer()
+  //    val contentServer = HttpServer()
   //    contentServer start
-  //    val rootDir = new File(ConfigFactory.load().getString("staticContentServer.rootPath"));
+  //    val rootDir = new File(ConfigFactory.load().getString("HttpServer.uploadPath"));
   //    val content = "test data test data test data"
   //    val file = new File(rootDir, "gettext1.txt")
   //    FileUtils.writeTextFile(file, content)
   //    println(contentServer.path)
-  //    val url = new URL(contentServer.path + "files/gettext1.txt")
+  //    val url = new URL(contentServer.path + "upload/gettext1.txt")
   //    val conn = url.openConnection().asInstanceOf[HttpURLConnection]
   //    val resp = getResponseContent(conn)
   //    log.debug(resp.toString)

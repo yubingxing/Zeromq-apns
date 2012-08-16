@@ -19,7 +19,7 @@ object Apn {
     var map = APN_MAP
     var apn: Apn = null
     if (map.contains(appId) && map(appId).isInstanceOf[ApnsService]) {
-      println("Get apnservice from cache.")
+//      println("Get apnservice from cache.")
       apn = map(appId).asInstanceOf[Apn]
     } else {
       apn = new Apn(appId, cert, pass)
@@ -27,7 +27,6 @@ object Apn {
     }
     apn
   }
-
 }
 class Apn private (val appId: String, val cert: String, val pass: String) {
   private val logger = LoggerFactory.getLogger(getClass)
@@ -37,7 +36,7 @@ class Apn private (val appId: String, val cert: String, val pass: String) {
   def send(token: String, payload: String, expiry: Int = 30000) {
     if (service != null) {
       logger.info("Send message to Apple APNs", token, payload)
-      println("Send message to Apple APNs", token, payload)
+//      println("Send message to Apple APNs", token, payload)
       service.push(token, payload)
     }
   }

@@ -54,15 +54,14 @@ object Server {
     val conf = ConfigFactory.load();
     RedisPool.init(conf.getString("redis.host"), conf.getInt("redis.port"))
     val address = conf.getString("apnserver.address")
-    println("Connecting to " + address)
+    println("ApnServer starting..., " + address)
+    val server = Server(system, address)
+    HttpServer().start
     debugMode = conf.getString("apnserver.debugMode").toLowerCase() == "on"
     println("[debugMode] = " + debugMode)
-    val server = Server(system, address)
-    val contentServer = StaticContentServer()
-    contentServer start;
   }
 }
-class Server(address: String) extends Actor with ActorLogging {
+class Server(val address: String) extends Actor with ActorLogging {
   private val repSocket = context.system.newSocket(SocketType.Rep, Bind(address), Listener(self))
   //**************************MSG COMMANDS*****************************// 
   private val CMD_SET_APP = """app (.+)::(.+)""".r
@@ -172,7 +171,7 @@ class Server(address: String) extends Actor with ActorLogging {
                 if (data != null) {
                   val content = JSON.parseObject(data)
                   val conf = ConfigFactory.load()
-                  val apn = Apn(appId, conf.getString("staticContentServer.rootPath") + content.getString("cert"), content.getString("pass"))
+                  val apn = Apn(appId, conf.getString("HttpServer.uploadPath") + content.getString("cert"), content.getString("pass"))
                   if (apn != null) {
                     apn.cleanInactiveDevies()
                     responseOK(cmd)

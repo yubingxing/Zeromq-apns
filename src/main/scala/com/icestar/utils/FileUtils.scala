@@ -7,17 +7,24 @@ import java.io.PrintStream
  * @author IceStar
  */
 object FileUtils {
-  def deleteDirectory(path: File): Boolean = {
+  def deleteTempDir(path: File): Boolean = {
     if (path.exists()) {
       val files = path.listFiles()
       files.foreach(f => {
         if (f.isFile())
           f.delete()
         else
-          deleteDirectory(f)
+          deleteTempDir(f)
       })
     }
     path.delete()
+  }
+
+  def createTempDir(namePrefix: String): File = {
+    val d = File.createTempFile(namePrefix, "")
+    d.delete
+    d.mkdir
+    d
   }
 
   def writeTextFile(path: File, content: String) {
