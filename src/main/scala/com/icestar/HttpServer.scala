@@ -68,13 +68,15 @@ class HttpServer private (val system: ActorSystem) extends AnyRef {
 
   private val conf = ConfigFactory.load
 
-  // Create root and temp dir
-  private val uploadDir: File = new File(conf.getString("HttpServer.uploadPath"))
+  // Create root, upload and temp dir
+  private val rootDir: File = new File(conf.getString("HttpServer.rootPath"))
+  rootDir mkdir
+  private val uploadDir: File = new File(rootDir.getAbsoluteFile() + "/" + conf.getString("HttpServer.uploadPath"))
   uploadDir mkdir
   private var tempDir: File = new File(conf.getString("HttpServer.tmpPath"))
   tempDir mkdir;
-  //  println("[rootFilePaths] = " + uploadDir.getAbsolutePath)
-  StaticContentHandlerConfig.rootFilePaths = Seq(uploadDir.getAbsolutePath);
+  //  println("[rootFilePaths] = " + rootDir.getAbsolutePath)
+  StaticContentHandlerConfig.rootFilePaths = Seq(rootDir.getAbsolutePath);
   StaticContentHandlerConfig.tempDir = tempDir;
   StaticContentHandlerConfig.browserCacheTimeoutSeconds = 60
   StaticContentHandlerConfig.serverCacheTimeoutSeconds = 2
@@ -96,7 +98,7 @@ class HttpServer private (val system: ActorSystem) extends AnyRef {
         httpRequest.response.redirect("http://" + httpRequest.endPoint.host + "/index.html")
       case GET(PathSegments(fileName :: Nil)) =>
         // Download requested file
-        staticFileHandlerRouter ! new StaticFileRequest(httpRequest, new File(uploadDir.getAbsolutePath, fileName))
+        staticFileHandlerRouter ! new StaticFileRequest(httpRequest, new File(rootDir.getAbsolutePath, fileName))
       case GET(_) =>
         println("httpRequest = " + httpRequest.request)
         // Send request to HttpHandler
@@ -109,7 +111,7 @@ class HttpServer private (val system: ActorSystem) extends AnyRef {
 
   def start() {
     // Create content
-    createContent(uploadDir)
+    createContent(rootDir)
 
     // Start web server
     webServer start;
@@ -202,16 +204,17 @@ private class FileUploadHandler extends Actor {
 
           val descriptionField = decoder.getBodyHttpData("fileDescription").asInstanceOf[Attribute]
 
-          println("============================================")
           val uploadField = decoder.getBodyHttpData("fileUpload").asInstanceOf[FileUpload]
-          println(uploadField)
-          val destFile = new File(msg.saveDir, uploadField.getFilename)
-          println("============================================")
-          println(msg.saveDir + "//" + uploadField.getFilename())
-          println("============================================")
+          val name = uploadField.getFilename
+          var filename: String = null
+          if (name.indexOf("/") < 0)
+            filename = name.substring(name.lastIndexOf("\\") + 1)
+          else
+            filename = name.substring(name.lastIndexOf("/") + 1)
+          val destFile = new File(msg.saveDir, filename)
           uploadField.renameTo(destFile)
 
-          ctx.response.write("File upload complete!")
+          ctx.response.write("File \"" + filename + "\" upload complete!")
         } else {
           ctx.response.write(HttpResponseStatus.BAD_REQUEST)
         }
