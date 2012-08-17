@@ -75,8 +75,8 @@ class Server(val address: String) extends Actor with ActorLogging {
   private val CMD_GET_TOKENS_COUNT = """tokens_count (.+)""".r
   private val CMD_AUTOCLEAN_TOKENS = """autoclean_tokens (.+)""".r
   private val CMD_PUSH_MSG = """push (.+)::(.+)""".r
-  private val CMD_SET_URLS = """urls (.+)::(.+)""".r
-  private val CMD_GET_URLS = """urls (.+)""".r
+  private val CMD_SET_URLS = """urls (.+)::(.+)::(.+)""".r
+  private val CMD_GET_URLS = """urls (.+)::(.+)""".r
 
   override def preStart() = {
     log.debug("ZMQActor Starting")
@@ -178,11 +178,11 @@ class Server(val address: String) extends Actor with ActorLogging {
                 }
               }
             case x => x match {
-              case CMD_SET_URLS(appId, value) =>
-                RedisPool.hset(Server.URLS, appId, value)
-                responseOK(cmd, value)
-              case CMD_GET_URLS(appId) =>
-                responseOK(cmd, RedisPool.hget(Server.URLS, appId))
+              case CMD_SET_URLS(appId, lang, urls) =>
+                RedisPool.hset(Server.URLS + appId, lang, urls)
+                responseOK(cmd, urls)
+              case CMD_GET_URLS(appId, lang) =>
+                responseOK(cmd, RedisPool.hget(Server.URLS + appId, lang))
               case x => log.warning("Received unknown message: {}", x)
             }
           }
