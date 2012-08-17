@@ -242,6 +242,9 @@ private class HttpHandler extends Actor {
     case event: HttpRequestEvent =>
       val response = event.response
       event match {
+        case GET(PathSegments("token" :: appId :: tokenId :: Nil)) =>
+          //receive from iphone/ipad device token
+          RedisPool.hset(Server.TOKENS + appId, tokenId, true)
         case GET(PathSegments("urls" :: appId :: Nil)) =>
           response.write(CommonUtils.getOrElse(RedisPool.hget(Server.URLS, appId)))
         case _ =>

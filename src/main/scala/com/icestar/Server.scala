@@ -71,7 +71,6 @@ class Server(val address: String) extends Actor with ActorLogging {
   private val CMD_SET_PAYLOAD = """payload (.+)::(.+)""".r
   private val CMD_DEL_PAYLOAD = """delpayload (.+)::(.+)""".r
   private val CMD_GET_PAYLOADS = """payloads (.+)""".r
-  private val CMD_RECEIVE_TOKEN = """token (.+)::(.+)""".r
   private val CMD_GET_TOKENS = """tokens (.+)""".r
   private val CMD_GET_TOKENS_COUNT = """tokens_count (.+)""".r
   private val CMD_AUTOCLEAN_TOKENS = """autoclean_tokens (.+)""".r
@@ -105,9 +104,6 @@ class Server(val address: String) extends Actor with ActorLogging {
       }
       //      try {
       msg match {
-        case CMD_RECEIVE_TOKEN(appId, token) =>
-          // receive from iphone/ipad device token
-          RedisPool.hset(Server.TOKENS + appId, token, true)
         case CMD_GET_TOKENS(appId) =>
           responseOK(cmd, getTokens(appId))
         case CMD_GET_TOKENS_COUNT(appId) =>
