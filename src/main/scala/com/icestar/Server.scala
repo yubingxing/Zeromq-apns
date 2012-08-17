@@ -31,11 +31,11 @@ import scalaj.collection.Imports.RichSSeq
  */
 object Server {
   //***************************CONSTANTS****************************//
-  val APN_APPS_MAP = "APN_APPS_MAP"
-  val BACKUP = "APN_BACKUP"
-  val PAYLOADS = "APN_PAYLOADS_"
-  val TOKENS = "APN_TOKENS_"
-  val URLS = "APN_URLS"
+  val APN_APPS_MAP = "APN_APPS_MAP::"
+  val BACKUP = "APN_BACKUP::"
+  val PAYLOADS = "APN_PAYLOADS::"
+  val TOKENS = "APN_TOKENS::"
+  val URLS = "APN_URLS::"
   private val logger = LoggerFactory.getLogger(getClass)
   var actor: ActorRef = _
   var debugMode: Boolean = _

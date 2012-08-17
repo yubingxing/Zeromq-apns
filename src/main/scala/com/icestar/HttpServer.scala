@@ -65,11 +65,6 @@ object HttpServer extends Logger {
   }
 }
 class HttpServer private (val system: ActorSystem) extends AnyRef {
-  private val staticFileHandlerRouter = system.actorOf(Props[StaticContentHandler]
-    .withRouter(FromConfig()).withDispatcher("my-pinned-dispatcher"), "static-file-router")
-
-  private val fileUploadHandlerRouter = system.actorOf(Props[FileUploadHandler]
-    .withRouter(FromConfig()).withDispatcher("my-pinned-dispatcher"), "file-upload-router")
 
   private val conf = ConfigFactory.load
 
@@ -77,33 +72,38 @@ class HttpServer private (val system: ActorSystem) extends AnyRef {
   private val uploadDir: File = new File(conf.getString("HttpServer.uploadPath"))
   uploadDir mkdir
   private var tempDir: File = new File(conf.getString("HttpServer.tmpPath"))
-  tempDir mkdir
-
-  /**
-   * define routes
-   */
-  private val routes = Routes({
-    case HttpRequest(request) => request match {
-      case POST(Path("/upload")) =>
-        // Save file to the upload directory so it can be downloaded
-        fileUploadHandlerRouter ! FileUploadRequest(request, uploadDir)
-      case GET(Path("/")) =>
-        request.response.redirect("http://" + request.endPoint.host + "/index.html")
-      case GET(PathSegments(fileName :: Nil)) =>
-        // Download requested file
-        println(uploadDir.getAbsolutePath() + fileName)
-        staticFileHandlerRouter ! new StaticFileRequest(request, new File(uploadDir, fileName))
-      case GET(_) =>
-        // Send request to HttpHandler
-        system.actorOf(Props[HttpHandler]) ! request
-    }
-  })
-
+  tempDir mkdir;
   //  println("[rootFilePaths] = " + uploadDir.getAbsolutePath)
   StaticContentHandlerConfig.rootFilePaths = Seq(uploadDir.getAbsolutePath);
   StaticContentHandlerConfig.tempDir = tempDir;
   StaticContentHandlerConfig.browserCacheTimeoutSeconds = 60
   StaticContentHandlerConfig.serverCacheTimeoutSeconds = 2
+
+  private val staticFileHandlerRouter = system.actorOf(Props[StaticContentHandler]
+    .withRouter(FromConfig()).withDispatcher("my-pinned-dispatcher"), "static-file-router")
+
+  private val fileUploadHandlerRouter = system.actorOf(Props[FileUploadHandler]
+    .withRouter(FromConfig()).withDispatcher("my-pinned-dispatcher"), "file-upload-router")
+  /**
+   * define routes
+   */
+  private val routes = Routes({
+    case HttpRequest(httpRequest) => httpRequest match {
+      case POST(Path("/upload")) =>
+        // Save file to the upload directory so it can be downloaded
+        fileUploadHandlerRouter ! FileUploadRequest(httpRequest, uploadDir)
+      case GET(Path("/")) =>
+        httpRequest.response.redirect("http://" + httpRequest.endPoint.host + "/index.html")
+      case GET(PathSegments(fileName :: Nil)) =>
+        // Download requested file
+        staticFileHandlerRouter ! new StaticFileRequest(httpRequest, new File(uploadDir.getAbsolutePath, fileName))
+      case GET(_) =>
+        println("httpRequest = " + httpRequest.request)
+        // Send request to HttpHandler
+        system.actorOf(Props[HttpHandler]) ! httpRequest
+    }
+  })
+
   private val webServer: WebServer = new WebServer(new WebServerConfig(conf, "HttpServer"),
     routes, system)
 
@@ -245,10 +245,11 @@ private class HttpHandler extends Actor {
         case GET(PathSegments("token" :: appId :: tokenId :: Nil)) =>
           //receive from iphone/ipad device token
           RedisPool.hset(Server.TOKENS + appId, tokenId, true)
+          response write "receive token OK"
         case GET(PathSegments("urls" :: appId :: Nil)) =>
-          response.write(CommonUtils.getOrElse(RedisPool.hget(Server.URLS, appId)))
+          response write CommonUtils.getOrElse(RedisPool.hget(Server.URLS, appId))
         case _ =>
-          response.write("Hello from Socko (" + new Date().toString() + ")")
+          response write ("Hello from Socko (" + new Date().toString() + ")")
       }
       context.stop(self)
   }
