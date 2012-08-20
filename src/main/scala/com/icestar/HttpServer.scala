@@ -250,7 +250,7 @@ private class HttpHandler extends Actor {
           RedisPool.hset(Server.TOKENS + appId, tokenId, true)
           response write "receive token OK"
         case GET(PathSegments("urls" :: appId :: lang :: Nil)) =>
-          response write CommonUtils.getOrElse(RedisPool.hget(Server.URLS + appId, lang))
+          response write CommonUtils.getOrElse(RedisPool.hget(Server.URLS + appId, lang), "{\"lang\":\"" + lang + "\"}")
         case _ =>
           response write ("Hello from Socko (" + new Date().toString() + ")")
       }

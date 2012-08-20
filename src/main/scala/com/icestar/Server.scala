@@ -182,7 +182,7 @@ class Server(val address: String) extends Actor with ActorLogging {
                 RedisPool.hset(Server.URLS + appId, lang, urls)
                 responseOK(cmd, urls)
               case CMD_GET_URLS(appId, lang) =>
-                responseOK(cmd, RedisPool.hget(Server.URLS + appId, lang))
+                responseOK(cmd, CommonUtils.getOrElse(RedisPool.hget(Server.URLS + appId, lang), "{\"lang\":\"" + lang + "\"}"))
               case x => log.warning("Received unknown message: {}", x)
             }
           }
