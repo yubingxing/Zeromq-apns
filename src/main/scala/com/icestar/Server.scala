@@ -2,26 +2,26 @@ package com.icestar
 
 import org.slf4j.LoggerFactory
 
-import com.alibaba.fastjson.serializer.SerializerFeature
 import com.alibaba.fastjson.JSON
-import com.icestar.utils.crypto.MD5
+import com.alibaba.fastjson.serializer.SerializerFeature
 import com.icestar.utils.CommonUtils
 import com.icestar.utils.RedisPool
+import com.icestar.utils.crypto.MD5
 import com.typesafe.config.ConfigFactory
 
-import akka.actor.actorRef2Scala
 import akka.actor.Actor
 import akka.actor.ActorLogging
 import akka.actor.ActorRef
 import akka.actor.ActorSystem
 import akka.actor.Props
-import akka.zeromq.zeromqSystem
+import akka.actor.actorRef2Scala
 import akka.zeromq.Bind
 import akka.zeromq.Connecting
 import akka.zeromq.Frame
 import akka.zeromq.Listener
 import akka.zeromq.SocketType
 import akka.zeromq.ZMQMessage
+import akka.zeromq.zeromqSystem
 import scalaj.collection.Imports.RichSMap
 import scalaj.collection.Imports.RichSSeq
 
@@ -71,6 +71,7 @@ class Server(val address: String) extends Actor with ActorLogging {
   private val CMD_SET_PAYLOAD = """payload (.+)::(.+)""".r
   private val CMD_DEL_PAYLOAD = """delpayload (.+)::(.+)""".r
   private val CMD_GET_PAYLOADS = """payloads (.+)""".r
+  private val CMD_START_PAYLOADS = """start (.+)""".r
   private val CMD_GET_TOKENS = """tokens (.+)""".r
   private val CMD_GET_TOKENS_COUNT = """tokens_count (.+)""".r
   private val CMD_AUTOCLEAN_TOKENS = """autoclean_tokens (.+)""".r
@@ -160,24 +161,28 @@ class Server(val address: String) extends Actor with ActorLogging {
             case CMD_GET_PAYLOADS(appId) =>
               // get all payloads
               responseOK(cmd, getPayloads(appId))
-            case CMD_AUTOCLEAN_TOKENS(appId) =>
-              if (RedisPool.hlen(Server.TOKENS + appId) <= 0) {
-                responseOK(cmd)
-              } else {
-                val data = RedisPool.hget(Server.APN_APPS_MAP, appId)
-                if (data != null) {
-                  val content = JSON.parseObject(data)
-                  val conf = ConfigFactory.load()
-                  val apn = Apn(appId, conf.getString("HttpServer.uploadPath") + content.getString("cert"), content.getString("pass"))
-                  if (apn != null) {
-                    apn.cleanInactiveDevies()
-                    responseOK(cmd)
-                  } else {
-                    responseFail(cmd)
+            case CMD_START_PAYLOADS(appId) =>
+              // start app's all the pushes
+              val keys = RedisPool.hkeys(Server.PAYLOADS + appId)
+//              keys.map(f)
+            case x => x match {
+              case CMD_AUTOCLEAN_TOKENS(appId) =>
+                if (RedisPool.hlen(Server.TOKENS + appId) <= 0) {
+                  responseOK(cmd)
+                } else {
+                  val data = RedisPool.hget(Server.APN_APPS_MAP, appId)
+                  if (data != null) {
+                    val content = JSON.parseObject(data)
+                    val conf = ConfigFactory.load()
+                    val apn = Apn(appId, conf.getString("HttpServer.uploadPath") + content.getString("cert"), content.getString("pass"))
+                    if (apn != null) {
+                      apn.cleanInactiveDevies()
+                      responseOK(cmd)
+                    } else {
+                      responseFail(cmd)
+                    }
                   }
                 }
-              }
-            case x => x match {
               case CMD_SET_URLS(appId, lang, urls) =>
                 RedisPool.hset(Server.URLS + appId, lang, urls)
                 responseOK(cmd, urls)
