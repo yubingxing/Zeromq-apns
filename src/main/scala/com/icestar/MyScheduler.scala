@@ -44,13 +44,14 @@ class MyScheduler private (system: ActorSystem, appId: String, key: String) exte
     if (content != null) {
       stop()
       val ct = content.getIntValue("ct").milliseconds
-      if (content.getBoolean("loop")) {
-        sdl = system.scheduler.schedule(ct, content.getIntValue("intval").milliseconds, Server.actor, ZMQMessage(Seq(Frame("send" + appId + "::" + key))))
-        ScheduleMap += (_key -> sdl)
-      } else {
-        sdl = system.scheduler.scheduleOnce(ct, Server.actor, ZMQMessage(Seq(Frame("send" + appId + "::" + key))))
-        ScheduleMap += (_key -> sdl)
-      }
+      val intval = content.getIntValue("intval").second
+      //      if (content.getBoolean("loop")) {
+      sdl = system.scheduler.schedule(ct, intval, Server.actor, ZMQMessage(Seq(Frame("send " + appId + "::" + key))))
+      ScheduleMap += (_key -> sdl)
+      //      } else {
+      //        sdl = system.scheduler.scheduleOnce(ct, Server.actor, ZMQMessage(Seq(Frame("send " + appId + "::" + key))))
+      //        ScheduleMap += (_key -> sdl)
+      //      }
 
       content.put("active", true)
       RedisPool.hset(Server.PAYLOADS + appId, key, content toJSONString)

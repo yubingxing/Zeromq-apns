@@ -164,6 +164,12 @@ class Server(val address: String) extends Actor with ActorLogging {
             case CMD_GET_PAYLOADS(appId) =>
               // get all payloads
               responseOK(cmd, getPayloads(appId))
+            case CMD_START_PAYLOAD(appId, key) =>
+              MyScheduler(appId, key) start;
+              responseOK(cmd)
+            case CMD_STOP_PAYLOAD(appId,key) =>
+              MyScheduler(appId, key) stop;
+              responseOK(cmd)
             case CMD_START_PAYLOADS(appId) =>
               // start app's all the pushes
               val keys = RedisPool.hkeys(Server.PAYLOADS + appId)
@@ -172,12 +178,6 @@ class Server(val address: String) extends Actor with ActorLogging {
             case CMD_STOP_PAYLOADS(appId) =>
               val keys = RedisPool.hkeys(Server.PAYLOADS + appId)
               keys.map(MyScheduler(appId, _) stop)
-              responseOK(cmd)
-            case CMD_START_PAYLOAD(appId, key) =>
-              MyScheduler(appId, key) start;
-              responseOK(cmd)
-            case CMD_STOP_PAYLOAD(appId,key) =>
-              MyScheduler(appId, key) stop;
               responseOK(cmd)
             case x => x match {
               case CMD_AUTOCLEAN_TOKENS(appId) =>
