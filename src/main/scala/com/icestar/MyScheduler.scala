@@ -22,7 +22,7 @@ object MyScheduler {
 
   /**
    * content is json string
-   * {"start":1344420078855, "end":1344450078855, "startTime":1344420078855, "duration":600000, "loop":true, "payload":""}
+   * {"ct":1344420078855, "et":1344450078855, "ctTime":1344420078855, "intval":600000, "loop":true, "alert":"xxxxxx", "badge":3, "sound":""}
    * @param content
    */
   def apply(appId: String, key: String) = {
@@ -43,16 +43,16 @@ class MyScheduler private (system: ActorSystem, appId: String, key: String) exte
   def start() = {
     if (content != null) {
       stop()
-      val start = content.getIntValue("start").milliseconds
+      val ct = content.getIntValue("ct").milliseconds
       if (content.getBoolean("loop")) {
-        sdl = system.scheduler.schedule(start, content.getIntValue("duration") milliseconds, Server.actor, ZMQMessage(Seq(Frame("send" + appId + "::" + key))))
+        sdl = system.scheduler.schedule(ct, content.getIntValue("intval").milliseconds, Server.actor, ZMQMessage(Seq(Frame("send" + appId + "::" + key))))
         ScheduleMap += (_key -> sdl)
       } else {
-        sdl = system.scheduler.scheduleOnce(start, Server.actor, ZMQMessage(Seq(Frame("send" + appId + "::" + key))))
+        sdl = system.scheduler.scheduleOnce(ct, Server.actor, ZMQMessage(Seq(Frame("send" + appId + "::" + key))))
         ScheduleMap += (_key -> sdl)
       }
 
-      content.put("activate", true)
+      content.put("active", true)
       RedisPool.hset(Server.PAYLOADS + appId, key, content toJSONString)
     }
   }
@@ -60,7 +60,7 @@ class MyScheduler private (system: ActorSystem, appId: String, key: String) exte
   def stop() = {
     if (sdl != null) {
       sdl cancel;
-      content.put("activate", false)
+      content.put("active", false)
       RedisPool.hset(Server.PAYLOADS + appId, key, content toJSONString)
     }
   }

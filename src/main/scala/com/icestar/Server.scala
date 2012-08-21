@@ -6,7 +6,6 @@ import com.alibaba.fastjson.JSON
 import com.alibaba.fastjson.serializer.SerializerFeature
 import com.icestar.utils.CommonUtils
 import com.icestar.utils.RedisPool
-import com.icestar.utils.crypto.MD5
 import com.typesafe.config.ConfigFactory
 
 import akka.actor.Actor
@@ -68,10 +67,13 @@ class Server(val address: String) extends Actor with ActorLogging {
   private val CMD_SET_APP = """app (.+)::(.+)""".r
   private val CMD_DEL_APP = """delapp (.+)""".r
   private val CMD_GET_APPS = "apps"
-  private val CMD_SET_PAYLOAD = """payload (.+)::(.+)""".r
+  private val CMD_SET_PAYLOAD = """payload (.+)::(.+)::(.+)""".r
   private val CMD_DEL_PAYLOAD = """delpayload (.+)::(.+)""".r
   private val CMD_GET_PAYLOADS = """payloads (.+)""".r
   private val CMD_START_PAYLOADS = """start (.+)""".r
+  private val CMD_STOP_PAYLOADS = """stop (.+)""".r
+  private val CMD_START_PAYLOAD = """start (.+)::(.+)""".r
+  private val CMD_STOP_PAYLOAD = """stop (.+)::(.+)""".r
   private val CMD_GET_TOKENS = """tokens (.+)""".r
   private val CMD_GET_TOKENS_COUNT = """tokens_count (.+)""".r
   private val CMD_AUTOCLEAN_TOKENS = """autoclean_tokens (.+)""".r
@@ -150,13 +152,14 @@ class Server(val address: String) extends Actor with ActorLogging {
             RedisPool.del(Server.TOKENS + appId)
             responseOK(cmd)
           case x => x match {
-            case CMD_SET_PAYLOAD(appId, value) =>
+            case CMD_SET_PAYLOAD(key, appId, value) =>
               // set appid payload data
-              val key = MD5.hash(value)
               RedisPool.hset(Server.PAYLOADS + appId, key, value)
+              println("Set payload [" + key + "] success!")
               responseOK(cmd)
             case CMD_DEL_PAYLOAD(appId, key) =>
               RedisPool.hdel(Server.PAYLOADS + appId, key)
+              println("Del payload [" + key + "] success!")
               responseOK(cmd)
             case CMD_GET_PAYLOADS(appId) =>
               // get all payloads
@@ -164,7 +167,18 @@ class Server(val address: String) extends Actor with ActorLogging {
             case CMD_START_PAYLOADS(appId) =>
               // start app's all the pushes
               val keys = RedisPool.hkeys(Server.PAYLOADS + appId)
-//              keys.map(f)
+              keys.map(MyScheduler(appId, _) stop)
+              responseOK(cmd)
+            case CMD_STOP_PAYLOADS(appId) =>
+              val keys = RedisPool.hkeys(Server.PAYLOADS + appId)
+              keys.map(MyScheduler(appId, _) stop)
+              responseOK(cmd)
+            case CMD_START_PAYLOAD(appId, key) =>
+              MyScheduler(appId, key) start;
+              responseOK(cmd)
+            case CMD_STOP_PAYLOAD(appId,key) =>
+              MyScheduler(appId, key) stop;
+              responseOK(cmd)
             case x => x match {
               case CMD_AUTOCLEAN_TOKENS(appId) =>
                 if (RedisPool.hlen(Server.TOKENS + appId) <= 0) {

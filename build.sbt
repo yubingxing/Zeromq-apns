@@ -27,6 +27,6 @@ libraryDependencies ++= Seq(
 	"com.notnoop.apns" % "apns" % "0.1.6" withSources(),
 	"org.mockito" % "mockito-all" % "1.9.0" % "test",
 	"org.mashupbots.socko" % "socko-webserver_2.9.1" % "0.2.0" withSources(),
-	"com.redis" % "scala-redis" % "1.0" from "http://cloud.github.com/downloads/yubingxing/scala-redis/scala-redis_2.9.2-1.0.jar",
+	"com.redis" % "scala-redis" % "1.1" from "http://cloud.github.com/downloads/yubingxing/scala-redis/scala-redis_2.9.2-1.0.jar",
 	"org.scalaj" % "scalaj-collection" % "2.0" from "http://cloud.github.com/downloads/yubingxing/scalaj-collection/scalaj-collection_2.9.2-2.0.jar"
 )
