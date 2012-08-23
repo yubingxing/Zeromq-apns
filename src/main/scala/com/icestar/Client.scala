@@ -7,7 +7,6 @@ import akka.actor.actorRef2Scala
 import akka.actor.Actor
 import akka.actor.ActorSystem
 import akka.actor.Props
-import akka.zeromq.zeromqSystem
 import akka.zeromq.Connect
 import akka.zeromq.Frame
 import akka.zeromq.Listener

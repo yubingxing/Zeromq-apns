@@ -10,7 +10,6 @@ import com.typesafe.config.ConfigFactory
 
 import akka.actor.Actor
 import akka.actor.ActorLogging
-import akka.actor.ActorRef
 import akka.actor.ActorSystem
 import akka.actor.Props
 import akka.actor.actorRef2Scala
@@ -31,7 +30,7 @@ import scalaj.collection.Imports.RichSSeq
 object Server {
   //***************************CONSTANTS****************************//
   private val logger = LoggerFactory.getLogger(getClass)
-  private val conf = ConfigFactory.load()
+  val conf = ConfigFactory.load()
 
   val APN_APPS_MAP = "APN_APPS_MAP::"
   val BACKUP = "APN_BACKUP::"
@@ -41,13 +40,9 @@ object Server {
   val URLS_ACTIVE_DATE = "AD_URLS_ACTDATE::"
 
   val debugMode: Boolean = conf.getString("apnserver.debugMode").toLowerCase() == "on"
-  var actor: ActorRef = _
 
   def apply(system: ActorSystem, address: String) = {
-    logger.info("Creating Sockets...")
-    actor = system.actorOf(Props(new Server(address)), "Server")
-    logger.info("Socket created success.")
-    actor
+    system.actorOf(Props(new Server(address)), "Server")
   }
 
   def main(args: Array[String]) = {

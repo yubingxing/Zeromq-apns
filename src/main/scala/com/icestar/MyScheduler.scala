@@ -49,10 +49,10 @@ class MyScheduler private (system: ActorSystem, appId: String, key: String) exte
       val now = new Date().getTime
       val ct = content.getLongValue("ct")
       val intval = content.getIntValue("intval").seconds
-      sdl = system.scheduler.schedule((if (now > ct) 0 else ct - now) milliseconds, intval, Server.actor, ZMQMessage(Seq(Frame("push " + appId + "::" + key))))
-      
+      sdl = system.scheduler.schedule((if (now > ct) 0 else ct - now) milliseconds, intval, Client(), ZMQMessage(Seq(Frame("push " + appId + "::" + key))))
+
       val et = (now - content.getLongValue("et")).milliseconds
-      sdl = system.scheduler.scheduleOnce(et, Server.actor, ZMQMessage(Seq(Frame("stop " + appId + "::" + key))))
+      sdl = system.scheduler.scheduleOnce(et, Client(), ZMQMessage(Seq(Frame("stop " + appId + "::" + key))))
       ScheduleMap += (_key -> sdl)
 
       content.put("active", true)
