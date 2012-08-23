@@ -30,12 +30,16 @@ import scalaj.collection.Imports.RichSSeq
  */
 object Server {
   //***************************CONSTANTS****************************//
+  private val logger = LoggerFactory.getLogger(getClass)
+  private val conf = ConfigFactory.load()
+
   val APN_APPS_MAP = "APN_APPS_MAP::"
   val BACKUP = "APN_BACKUP::"
   val PAYLOADS = "APN_PAYLOADS::"
   val TOKENS = "APN_TOKENS::"
-  val URLS = "APN_URLS::"
-  private val logger = LoggerFactory.getLogger(getClass)
+  val URLS = "AD_URLS::"
+  val URLS_ACTIVE_DATE = "AD_URLS_ACTDATE::"
+
   var actor: ActorRef = _
   var debugMode: Boolean = _
 
@@ -51,7 +55,6 @@ object Server {
     val system = ActorSystem("apnserver")
     //    Conf read args.head
     logger.info("Reading configure...")
-    val conf = ConfigFactory.load();
     RedisPool.init(conf.getString("redis.host"), conf.getInt("redis.port"))
     val address = conf.getString("apnserver.address")
     println("ApnServer starting..., " + address)
@@ -66,6 +69,7 @@ class Server(val address: String) extends Actor with ActorLogging {
   //**************************MSG COMMANDS*****************************// 
   private val CMD_SET_APP = """app (.+)::(.+)""".r
   private val CMD_DEL_APP = """delapp (.+)""".r
+  private val CMD_EXIST_APP = """existapp (.+)""".r
   private val CMD_GET_APPS = "apps"
   private val CMD_SET_PAYLOAD = """payload (.+)::(.+)::(.+)""".r
   private val CMD_DEL_PAYLOAD = """delpayload (.+)::(.+)""".r
@@ -80,6 +84,8 @@ class Server(val address: String) extends Actor with ActorLogging {
   private val CMD_PUSH_MSG = """push (.+)::(.+)""".r
   private val CMD_SET_URLS = """urls (.+)::(.+)::(.+)""".r
   private val CMD_GET_URLS = """urls (.+)::(.+)""".r
+  private val CMD_SET_URLS_ACTDATE = """url_act (.+)::(.+)""".r
+  private val CMD_GET_URLS_ACTDATE = """url_act (.+)""".r
 
   override def preStart() = {
     log.debug("ZMQActor Starting")
@@ -140,6 +146,8 @@ class Server(val address: String) extends Actor with ActorLogging {
               val content = JSON.toJSONString(data.asJava, SerializerFeature.PrettyFormat)
               responseOK(cmd, content)
             }
+          case CMD_EXIST_APP(appId) =>
+            responseOK(cmd, RedisPool.hexists(Server.APN_APPS_MAP, appId) + "")
           case CMD_DEL_APP(appId) =>
             // backup app details
             RedisPool.hset(Server.BACKUP, appId, RedisPool.hget(Server.APN_APPS_MAP, appId))
@@ -167,7 +175,7 @@ class Server(val address: String) extends Actor with ActorLogging {
             case CMD_START_PAYLOAD(appId, key) =>
               MyScheduler(appId, key) start;
               responseOK(cmd)
-            case CMD_STOP_PAYLOAD(appId,key) =>
+            case CMD_STOP_PAYLOAD(appId, key) =>
               MyScheduler(appId, key) stop;
               responseOK(cmd)
             case CMD_START_PAYLOADS(appId) =>
@@ -202,6 +210,11 @@ class Server(val address: String) extends Actor with ActorLogging {
                 responseOK(cmd, urls)
               case CMD_GET_URLS(appId, lang) =>
                 responseOK(cmd, CommonUtils.getOrElse(RedisPool.hget(Server.URLS + appId, lang), "{\"lang\":\"" + lang + "\"}"))
+              case CMD_SET_URLS_ACTDATE(appId, date) =>
+                RedisPool.hset(Server.URLS_ACTIVE_DATE, appId, date)
+                responseOK(cmd)
+              case CMD_GET_URLS_ACTDATE(appId) =>
+                responseOK(cmd, RedisPool.hget(Server.URLS_ACTIVE_DATE, appId))
               case x => log.warning("Received unknown message: {}", x)
             }
           }
