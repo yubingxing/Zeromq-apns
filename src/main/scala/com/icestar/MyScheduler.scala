@@ -36,7 +36,7 @@ object MyScheduler {
 class MyScheduler private (system: ActorSystem, appId: String, key: String) extends AnyRef {
   private val _key = appId + key
   val json: String = RedisPool.hget(Server.PAYLOADS + appId, key).asInstanceOf[String]
-  var sdl: Cancellable = ScheduleMap.get(_key) get;
+  var sdl: Cancellable = ScheduleMap.get(_key) getOrElse null;
   var content: JSONObject = _
 
   if (json != "" || json != null) {
