@@ -40,8 +40,8 @@ object Server {
   val URLS = "AD_URLS::"
   val URLS_ACTIVE_DATE = "AD_URLS_ACTDATE::"
 
+  val debugMode: Boolean = conf.getString("apnserver.debugMode").toLowerCase() == "on"
   var actor: ActorRef = _
-  var debugMode: Boolean = _
 
   def apply(system: ActorSystem, address: String) = {
     logger.info("Creating Sockets...")
@@ -58,9 +58,8 @@ object Server {
     RedisPool.init(conf.getString("redis.host"), conf.getInt("redis.port"))
     val address = conf.getString("apnserver.address")
     println("ApnServer starting..., " + address)
-    val server = Server(system, address)
-    HttpServer().start
-    debugMode = conf.getString("apnserver.debugMode").toLowerCase() == "on"
+    Server(system, address)
+    HttpServer() start;
     println("[debugMode] = " + debugMode)
   }
 }
@@ -166,7 +165,7 @@ class Server(val address: String) extends Actor with ActorLogging {
               println("Set payload [" + key + "] success!")
               responseOK(cmd)
             case CMD_DEL_PAYLOAD(appId, key) =>
-              RedisPool.hdel(Server.PAYLOADS + appId, key)
+              MyScheduler(appId, key) delete;
               println("Del payload [" + key + "] success!")
               responseOK(cmd)
             case CMD_GET_PAYLOADS(appId) =>

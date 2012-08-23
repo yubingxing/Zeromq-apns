@@ -1,5 +1,7 @@
 package com.icestar
 
+import java.util.Date
+
 import scala.collection.mutable.HashMap
 
 import org.slf4j.LoggerFactory
@@ -11,6 +13,7 @@ import com.icestar.utils.RedisPool
 import akka.actor.ActorSystem
 import akka.actor.Cancellable
 import akka.util.duration.intToDurationInt
+import akka.util.duration.longToDurationLong
 import akka.zeromq.Frame
 import akka.zeromq.ZMQMessage
 
@@ -22,7 +25,7 @@ object MyScheduler {
 
   /**
    * content is json string
-   * {"ct":1344420078855, "et":1344450078855, "ctTime":1344420078855, "intval":600000, "loop":true, "alert":"xxxxxx", "badge":3, "sound":""}
+   * {"ct":1344420078855, "et":1344450078855, "ctTime":1344420078855, "intval":600000, "alert":"xxxxxx", "badge":3, "sound":""}
    * @param content
    */
   def apply(appId: String, key: String) = {
@@ -43,15 +46,14 @@ class MyScheduler private (system: ActorSystem, appId: String, key: String) exte
   def start() = {
     if (content != null) {
       stop()
-      val ct = content.getIntValue("ct").milliseconds
-      val intval = content.getIntValue("intval").second
-      //      if (content.getBoolean("loop")) {
-      sdl = system.scheduler.schedule(ct, intval, Server.actor, ZMQMessage(Seq(Frame("push " + appId + "::" + key))))
+      val now = new Date().getTime
+      val ct = content.getLongValue("ct")
+      val intval = content.getIntValue("intval").seconds
+      sdl = system.scheduler.schedule((if (now > ct) 0 else ct - now) milliseconds, intval, Server.actor, ZMQMessage(Seq(Frame("push " + appId + "::" + key))))
+      
+      val et = (now - content.getLongValue("et")).milliseconds
+      sdl = system.scheduler.scheduleOnce(et, Server.actor, ZMQMessage(Seq(Frame("stop " + appId + "::" + key))))
       ScheduleMap += (_key -> sdl)
-      //      } else {
-      //        sdl = system.scheduler.scheduleOnce(ct, Server.actor, ZMQMessage(Seq(Frame("send " + appId + "::" + key))))
-      //        ScheduleMap += (_key -> sdl)
-      //      }
 
       content.put("active", true)
       RedisPool.hset(Server.PAYLOADS + appId, key, content toJSONString)

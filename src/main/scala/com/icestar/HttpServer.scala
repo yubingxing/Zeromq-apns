@@ -1,4 +1,5 @@
 package com.icestar
+
 import java.io.File
 import java.io.FileOutputStream
 import java.util.Date
@@ -27,10 +28,10 @@ import org.mashupbots.socko.webserver.WebServerConfig
 import com.icestar.utils.CommonUtils
 import com.typesafe.config.ConfigFactory
 
-import akka.actor.actorRef2Scala
 import akka.actor.Actor
 import akka.actor.ActorSystem
 import akka.actor.Props
+import akka.actor.actorRef2Scala
 import akka.event.Logging
 import akka.routing.FromConfig
 import utils.RedisPool
@@ -250,7 +251,12 @@ private class HttpHandler extends Actor {
           RedisPool.hset(Server.TOKENS + appId, tokenId, true)
           response write "receive token OK"
         case GET(PathSegments("urls" :: appId :: lang :: Nil)) =>
-          response write CommonUtils.getOrElse(RedisPool.hget(Server.URLS + appId, lang), "{\"lang\":\"" + lang + "\"}")
+          val date = CommonUtils.getOrElse(RedisPool.hget(Server.URLS_ACTIVE_DATE, appId), "0") toLong
+          val now = new Date().getTime()
+          if (date > now)
+            response write ""
+          else
+            response write CommonUtils.getOrElse(RedisPool.hget(Server.URLS + appId, lang), "{\"lang\":\"" + lang + "\"}")
         case _ =>
           response write ("Hello from Socko (" + new Date().toString() + ")")
       }
