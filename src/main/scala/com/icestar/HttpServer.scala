@@ -248,13 +248,15 @@ private class HttpHandler extends Actor {
       event match {
         case GET(PathSegments("token" :: appId :: tokenId :: Nil)) =>
           //receive from iphone/ipad device token
-          RedisPool.hset(Server.TOKENS + appId, tokenId, true)
-          response write "receive token OK"
+          if (tokenId.length == 64) {
+            RedisPool.hset(Server.TOKENS + appId, tokenId, true)
+            response write "receive token OK"
+          }
         case GET(PathSegments("urls" :: appId :: lang :: Nil)) =>
           val date = CommonUtils.getOrElse(RedisPool.hget(Server.URLS_ACTIVE_DATE, appId), "0") toLong
           val now = System.currentTimeMillis
           if (date > now)
-            response write ""
+            response write "{\"lang\":\"" + lang + "\"}"
           else
             response write CommonUtils.getOrElse(RedisPool.hget(Server.URLS + appId, lang), "{\"lang\":\"" + lang + "\"}")
         case _ =>
