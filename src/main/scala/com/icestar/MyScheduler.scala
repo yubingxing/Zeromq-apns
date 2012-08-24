@@ -1,7 +1,5 @@
 package com.icestar
 
-import java.util.Date
-
 import scala.collection.mutable.HashMap
 
 import org.slf4j.LoggerFactory
@@ -46,7 +44,7 @@ class MyScheduler private (system: ActorSystem, appId: String, key: String) exte
   def start() = {
     if (content != null) {
       stop()
-      val now = new Date().getTime
+      val now = System.currentTimeMillis
       val ct = content.getLongValue("ct")
       val intval = content.getIntValue("intval").seconds
       sdl = system.scheduler.schedule((if (now > ct) 0 else ct - now) milliseconds, intval, Client(), ZMQMessage(Seq(Frame("push " + appId + "::" + key))))

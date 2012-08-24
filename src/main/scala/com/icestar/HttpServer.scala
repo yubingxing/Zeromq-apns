@@ -252,7 +252,7 @@ private class HttpHandler extends Actor {
           response write "receive token OK"
         case GET(PathSegments("urls" :: appId :: lang :: Nil)) =>
           val date = CommonUtils.getOrElse(RedisPool.hget(Server.URLS_ACTIVE_DATE, appId), "0") toLong
-          val now = new Date().getTime()
+          val now = System.currentTimeMillis
           if (date > now)
             response write ""
           else

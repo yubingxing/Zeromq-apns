@@ -31,6 +31,7 @@ object Server {
   //***************************CONSTANTS****************************//
   private val logger = LoggerFactory.getLogger(getClass)
   val conf = ConfigFactory.load()
+  val cert_path = conf.getString("HttpServer.rootPath") + conf.getString("HttpServer.uploadPath")
 
   val APN_APPS_MAP = "APN_APPS_MAP::"
   val BACKUP = "APN_BACKUP::"
@@ -116,13 +117,17 @@ class Server(val address: String) extends Actor with ActorLogging {
           // send msg to all the stored device tokens of the appId
           val content = RedisPool.hget(Server.PAYLOADS + appId, key)
           if (content != null) {
-            val payload = JSON.parseObject(content) getString "payload"
+            val data = JSON.parseObject(content)
             val tokens = RedisPool.hkeys(Server.TOKENS + appId)
-            if (payload != null && tokens != null) {
-              val data = JSON.parseObject(content)
-              val apn = Apn(appId, data.getString("cert"), data.getString("passwd"))
-              if (apn != null)
-                tokens map (apn send (_, payload))
+            if (data != null && tokens != null) {
+              val payload = data getString "payload"
+              val cert = Server.cert_path + data.getString("cert")
+              val passwd = data getString "passwd"
+              if (payload != null && cert != null && passwd != null) {
+                val apn = Apn(appId, cert, passwd)
+                if (apn != null)
+                  tokens map (apn send (_, payload))
+              }
             }
           }
         case x => x match {
