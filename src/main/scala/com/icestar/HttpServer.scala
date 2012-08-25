@@ -95,6 +95,8 @@ class HttpServer private (val system: ActorSystem) extends AnyRef {
       case POST(Path("/upload")) =>
         // Save file to the upload directory so it can be downloaded
         fileUploadHandlerRouter ! FileUploadRequest(httpRequest, uploadDir)
+      case GET(Path("/apn")) =>
+        httpRequest.response.redirect("http://" + httpRequest.endPoint.host + "/apn/index.html")
       case GET(Path("/")) =>
         httpRequest.response.redirect("http://" + httpRequest.endPoint.host + "/index.html")
       case GET(PathSegments(fileName :: Nil)) =>
