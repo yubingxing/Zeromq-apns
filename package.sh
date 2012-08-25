@@ -14,5 +14,9 @@ cp target/scala-2.9.2/lib/* $DIST/lib
 #cp target/scala_2.9.2/resources/* $DIST/conf
 
 cp server.sh $DIST
+cp autogenZMQfromSrc.sh $DIST
+cp autogenZMQonMac.sh $DIST
+cp autogenZMQonUbuntu.sh $DIST
+
 cp src/main/resources/* $DIST/conf
 chmod +x $DIST/bin/*
