@@ -48,10 +48,13 @@ class Apn private (val appId: String, val cert: String, val pass: String) {
 
   def cleanInactiveDevies() {
     using = true
-    val map = service.getInactiveDevices().keySet().iterator()
-    while (map.hasNext()) {
-      val token = map.next
-      RedisPool.hdel(Server.TOKENS + appId, token)
+    val devices = service.getInactiveDevices
+    if(devices != null) {
+      val map = devices.keySet().iterator()
+      while (map.hasNext()) {
+        val token = map.next
+        RedisPool.hdel(Server.TOKENS + appId, token)
+      }
     }
     using = false
   }

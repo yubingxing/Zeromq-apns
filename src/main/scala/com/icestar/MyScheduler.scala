@@ -68,6 +68,7 @@ class MyScheduler private (system: ActorSystem, appId: String, key: String) exte
 
   def delete() = {
     stop()
+    ScheduleMap.remove(_key)
     RedisPool.hdel(Server.PAYLOADS + appId, key)
   }
 }

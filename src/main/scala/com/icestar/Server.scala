@@ -195,7 +195,7 @@ class Server(val address: String) extends Actor with ActorLogging {
                   if (data != null) {
                     val content = JSON.parseObject(data)
                     val conf = ConfigFactory.load()
-                    val apn = Apn(appId, conf.getString("HttpServer.uploadPath") + content.getString("cert"), content.getString("pass"))
+                    val apn = Apn(appId, Server.cert_path, content.getString("passwd"))
                     if (apn != null) {
                       apn.cleanInactiveDevies()
                       responseOK(cmd)
