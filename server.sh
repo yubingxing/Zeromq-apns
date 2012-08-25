@@ -16,4 +16,4 @@ echo libs=$libs
 
 daemon \
   -n zmq-apnserver \
-  `javaw -server -XX:+CMSClassUnloadingEnabled -XX:MaxPermSize=1536m -Xmx1024M -Xss4M -classpath $libs com.icestar.Server "$@"` &
+  `java -server -XX:+CMSClassUnloadingEnabled -XX:MaxPermSize=1536m -Xmx1024M -Xss4M -classpath $libs com.icestar.Server "$@"` &
