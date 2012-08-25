@@ -19,4 +19,4 @@ cp autogenZMQonMac.sh $DIST
 cp autogenZMQonUbuntu.sh $DIST
 
 cp src/main/resources/* $DIST/conf
-chmod +x $DIST/bin/*
+chmod +x $DIST/*
