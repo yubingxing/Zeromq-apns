@@ -90,9 +90,11 @@ class Server(val address: String) extends Actor with ActorLogging {
       reason.getMessage, message.getOrElse(""))
   }
 
-  def println(str: Any) {
-    if (Server.debugMode)
+  def println(str: String) {
+    if (Server.debugMode) {
+      log info str;
       Console println str
+    }
   }
 
   def receive = {
